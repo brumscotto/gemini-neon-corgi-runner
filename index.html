@@ -1,0 +1,2819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Temple Corgi - 3D Endless Runner</title>
+  <!-- Social & Messaging Link Preview Metadata -->
+  <meta name="description" content="Dash, leap, and corgi sploot through an ancient sunlit jungle temple! Can you beat my high score?" />
+  <meta name="theme-color" content="#1b2e24" />
+  <meta property="og:title" content="Temple Corgi - 3D Endless Runner" />
+  <meta property="og:description" content="Help an adorable 3D Corgi dash through an ancient jungle temple. Tap to play and beat my score!" />
+  <meta property="og:type" content="website" />
+  <!-- Playful adventure typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
+  <!-- Three.js r128 CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    :root {
+      --gold: #ffd147;
+      --gold-dark: #d98a00;
+      --amber: #ff8c2b;
+      --corgi: #e88b3a;
+      --jungle-dark: #14281d;
+      --stone-bg: rgba(24, 34, 28, 0.78);
+      --glass-border: rgba(255, 224, 150, 0.35);
+      --danger: #ff4d4d;
+      --cyan: #38e8ff;
+      --magenta: #ff4fd8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #1b2e24;
+      font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+      touch-action: none; /* Prevent pull-to-refresh & scrolling on mobile */
+      overscroll-behavior: none;
+    }
+
+    #game-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    /* ================= HUD OVERLAY ================= */
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    #hud.visible {
+      opacity: 1;
+    }
+
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .hud-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--stone-bg);
+      border: 2px solid var(--glass-border);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 6px 14px;
+      color: #fff8e7;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+      min-width: 112px;
+    }
+
+    .stat-pill .label {
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #f6d594;
+      font-weight: 800;
+    }
+
+    .stat-pill .value {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.35rem;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .bone-pill .value {
+      color: var(--gold);
+    }
+
+    .challenge-pill {
+      border-color: rgba(56, 232, 255, 0.65);
+      background: rgba(16, 40, 44, 0.85);
+    }
+
+    .challenge-pill.beaten {
+      border-color: rgba(82, 255, 168, 0.85);
+      background: rgba(18, 56, 36, 0.88);
+    }
+
+    .challenge-pill .value {
+      color: var(--cyan);
+      font-size: 1.05rem;
+    }
+
+    .challenge-pill.beaten .value {
+      color: #6effb0;
+    }
+
+    .hud-actions {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .icon-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      border: 2px solid var(--glass-border);
+      background: var(--stone-bg);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #fff8e7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.28);
+      transition: transform 0.12s ease, background 0.15s ease;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.92);
+    }
+
+    .icon-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    /* Power-up bar */
+    #powerup-container {
+      align-self: center;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+      width: min(260px, 78vw);
+    }
+
+    .powerup-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(16, 26, 22, 0.85);
+      border: 2px solid rgba(255, 255, 255, 0.28);
+      border-radius: 999px;
+      padding: 6px 12px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      animation: popIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .powerup-bar.magnet {
+      border-color: rgba(255, 79, 216, 0.75);
+    }
+
+    .powerup-bar.shield {
+      border-color: rgba(56, 232, 255, 0.75);
+    }
+
+    .powerup-icon {
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+
+    .powerup-track {
+      flex: 1;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .powerup-fill {
+      height: 100%;
+      width: 100%;
+      border-radius: 999px;
+      transition: width 0.08s linear;
+    }
+
+    .powerup-bar.magnet .powerup-fill {
+      background: linear-gradient(90deg, #ff4fd8, #ff99e8);
+    }
+
+    .powerup-bar.shield .powerup-fill {
+      background: linear-gradient(90deg, #1cb8ff, #6ff7ff);
+    }
+
+    /* Floating feedback toast */
+    #toast-banner {
+      position: fixed;
+      top: 22%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.45rem;
+      color: #fff;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+      opacity: 0;
+      z-index: 15;
+      transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+      white-space: nowrap;
+    }
+
+    #toast-banner.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.05);
+    }
+
+    /* ================= MODAL SCREENS ================= */
+    .screen-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: max(22px, env(safe-area-inset-top)) 20px max(26px, env(safe-area-inset-bottom));
+      background: radial-gradient(circle at 50% 42%, rgba(20, 35, 25, 0.18) 0%, rgba(12, 22, 16, 0.68) 100%);
+      transition: opacity 0.28s ease, visibility 0.28s ease;
+    }
+
+    .screen-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .title-block {
+      text-align: center;
+      margin-top: 2vh;
+      animation: floatTitle 3s ease-in-out infinite;
+    }
+
+    .title-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #2d5a3c, #183624);
+      border: 2px solid #f7c95c;
+      color: #ffe394;
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .game-title {
+      font-family: 'Fredoka', sans-serif;
+      font-size: clamp(2.6rem, 9.5vw, 4.4rem);
+      line-height: 0.96;
+      letter-spacing: 0.02em;
+      color: #fff6dc;
+      text-shadow:
+        0 4px 0 #b85d19,
+        0 8px 0 #6e310a,
+        0 14px 24px rgba(0, 0, 0, 0.55);
+    }
+
+    .game-title span {
+      display: block;
+      color: var(--gold);
+    }
+
+    .start-bottom {
+      width: 100%;
+      max-width: 390px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .highscore-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(20, 32, 24, 0.82);
+      border: 2px solid rgba(255, 209, 71, 0.45);
+      border-radius: 999px;
+      padding: 7px 18px;
+      color: #ffebb3;
+      font-weight: 800;
+      font-size: 0.95rem;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .highscore-pill strong {
+      font-family: 'Fredoka', sans-serif;
+      color: var(--gold);
+      font-size: 1.15rem;
+    }
+
+    .primary-btn {
+      width: 100%;
+      max-width: 280px;
+      padding: 16px 28px;
+      border-radius: 20px;
+      border: 3px solid #fff3c4;
+      background: linear-gradient(180deg, #ffbe3b 0%, #f07b16 100%);
+      color: #fffdf7;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.65rem;
+      letter-spacing: 0.05em;
+      text-shadow: 0 2px 4px rgba(122, 46, 0, 0.65);
+      box-shadow:
+        0 7px 0 #a84908,
+        0 14px 26px rgba(0, 0, 0, 0.45);
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s ease;
+    }
+
+    .primary-btn:hover {
+      filter: brightness(1.06);
+    }
+
+    .primary-btn:active {
+      transform: translateY(5px);
+      box-shadow:
+        0 2px 0 #a84908,
+        0 6px 12px rgba(0, 0, 0, 0.35);
+    }
+
+    .secondary-btn {
+      width: 100%;
+      max-width: 240px;
+      padding: 12px 22px;
+      border-radius: 16px;
+      border: 2px solid rgba(255, 232, 179, 0.4);
+      background: rgba(24, 38, 30, 0.85);
+      color: #fff4d6;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.15rem;
+      cursor: pointer;
+      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.3);
+      transition: transform 0.1s ease;
+    }
+
+    .secondary-btn:active {
+      transform: scale(0.96);
+    }
+
+    .controls-card {
+      width: 100%;
+      background: rgba(18, 29, 23, 0.78);
+      border: 1.5px solid rgba(255, 224, 150, 0.28);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 18px;
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      text-align: center;
+      color: #f4e8cd;
+    }
+
+    .hint-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+
+    .hint-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(255, 209, 71, 0.16);
+      border: 1px solid rgba(255, 209, 71, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
+      color: var(--gold);
+    }
+
+    .start-mute-wrap {
+      position: fixed;
+      top: max(14px, env(safe-area-inset-top));
+      right: max(14px, env(safe-area-inset-right));
+      z-index: 25;
+      display: flex;
+      gap: 8px;
+    }
+
+    .challenge-banner {
+      width: 100%;
+      background: linear-gradient(135deg, rgba(24, 62, 68, 0.92), rgba(16, 36, 42, 0.92));
+      border: 2px solid rgba(56, 232, 255, 0.65);
+      border-radius: 16px;
+      padding: 10px 14px;
+      text-align: center;
+      color: #e8fdff;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+      animation: popIn 0.3s ease;
+    }
+
+    .challenge-banner.hidden {
+      display: none;
+    }
+
+    .challenge-banner .ch-title {
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      font-weight: 900;
+    }
+
+    .challenge-banner .ch-goal {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.25rem;
+      color: #fff8e7;
+      margin-top: 2px;
+    }
+
+    .go-actions {
+      width: 100%;
+      max-width: 280px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .share-btn {
+      padding: 12px 10px;
+      border-radius: 16px;
+      border: 2px solid rgba(138, 255, 224, 0.6);
+      background: linear-gradient(180deg, #24c68e 0%, #148763 100%);
+      color: #ffffff;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.98rem;
+      letter-spacing: 0.03em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #0c5940, 0 8px 16px rgba(0, 0, 0, 0.3);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+
+    .share-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #0c5940;
+    }
+
+    .card-btn {
+      padding: 12px 10px;
+      border-radius: 16px;
+      border: 2px solid rgba(255, 224, 150, 0.45);
+      background: rgba(24, 38, 30, 0.9);
+      color: #ffe8a3;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.98rem;
+      letter-spacing: 0.03em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.25);
+      transition: transform 0.1s ease;
+    }
+
+    .card-btn:active {
+      transform: translateY(3px);
+    }
+
+    /* Center modal card for Pause & Game Over */
+    .modal-center {
+      justify-content: center;
+      background: rgba(10, 18, 14, 0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .modal-card {
+      width: min(360px, 92vw);
+      background: linear-gradient(180deg, rgba(35, 50, 40, 0.96) 0%, rgba(20, 31, 24, 0.98) 100%);
+      border: 3px solid rgba(255, 214, 102, 0.55);
+      border-radius: 26px;
+      padding: 26px 22px 24px;
+      text-align: center;
+      color: #fff8e7;
+      box-shadow: 0 22px 50px rgba(0, 0, 0, 0.55);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      animation: popIn 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .modal-title {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 2.1rem;
+      color: #ffe8a3;
+      text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+    }
+
+    .new-best-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #ff4fd8, #ff9900);
+      color: #fff;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.92rem;
+      letter-spacing: 0.08em;
+      padding: 5px 14px;
+      border-radius: 999px;
+      box-shadow: 0 4px 14px rgba(255, 115, 0, 0.45);
+      animation: pulseBadge 1.2s ease-in-out infinite;
+    }
+
+    .new-best-badge.hidden {
+      display: none;
+    }
+
+    .score-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .score-box {
+      background: rgba(12, 20, 15, 0.6);
+      border: 1.5px solid rgba(255, 224, 150, 0.25);
+      border-radius: 16px;
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .score-box.full {
+      grid-column: 1 / -1;
+      background: rgba(255, 209, 71, 0.12);
+      border-color: rgba(255, 209, 71, 0.45);
+    }
+
+    .score-box .k {
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: #d7cca8;
+      font-weight: 800;
+    }
+
+    .score-box .v {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.75rem;
+      color: #fff8e7;
+      line-height: 1.05;
+    }
+
+    .score-box.full .v {
+      font-size: 2.3rem;
+      color: var(--gold);
+    }
+
+    @keyframes floatTitle {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.88); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes pulseBadge {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.07); }
+    }
+
+    @media (max-height: 620px) {
+      .game-title { font-size: 2.4rem; }
+      .controls-card { padding: 8px 10px; }
+      .primary-btn { padding: 13px 22px; font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <!-- Floating action/powerup feedback -->
+  <div id="toast-banner"></div>
+
+  <!-- In-Game HUD -->
+  <div id="hud">
+    <div class="hud-top">
+      <div class="hud-stats">
+        <div class="stat-pill">
+          <span class="label">Score</span>
+          <span class="value" id="hud-score">0</span>
+        </div>
+        <div class="stat-pill bone-pill">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffd147" aria-hidden="true">
+            <path d="M18.5 5.5a2.5 2.5 0 0 0-2.45 2h-8.1a2.5 2.5 0 1 0-2.45 3 2.5 2.5 0 1 0 2.45 3h8.1a2.5 2.5 0 1 0 2.45-3 2.5 2.5 0 0 0 0-5z" transform="rotate(-25 12 12)"/>
+          </svg>
+          <span class="value" id="hud-bones">0</span>
+        </div>
+        <div class="stat-pill challenge-pill" id="hud-challenge" style="display:none">
+          <span class="label" id="hud-challenge-label">Beat</span>
+          <span class="value" id="hud-challenge-val">0</span>
+        </div>
+      </div>
+
+      <div class="hud-actions">
+        <button class="icon-btn" id="btn-mute-hud" aria-label="Toggle Sound">
+          <svg class="icon-sound-on" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+          <svg class="icon-sound-off" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-pause" aria-label="Pause Game">
+          <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Power-Up Timers -->
+    <div id="powerup-container"></div>
+  <!-- Start Screen Mute & Share Buttons -->
+  <div class="start-mute-wrap" id="start-mute-wrap">
+    <button class="icon-btn" id="btn-share-start" aria-label="Share Game">
+      <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+    </button>
+    <button class="icon-btn" id="btn-mute-start" aria-label="Toggle Sound">
+      <svg class="icon-sound-on" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+      <svg class="icon-sound-off" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+    </button>
+  </div>
+
+  <!-- Start Screen -->
+  <div class="screen-overlay" id="screen-start">
+    <div class="title-block">
+      <div class="title-badge">Ancient Jungle Dash</div>
+      <h1 class="game-title">TEMPLE<span>CORGI</span></h1>
+    </div>
+
+    <div class="start-bottom">
+      <div class="challenge-banner hidden" id="challenge-banner">
+        <div class="ch-title">Friend's Challenge</div>
+        <div class="ch-goal" id="challenge-banner-text">Beat 0 Points!</div>
+      </div>
+
+      <div class="highscore-pill">
+        <span>BEST RUN:</span>
+        <strong id="start-best-score">0</strong>
+      </div>
+
+      <button class="primary-btn" id="btn-play">PLAY</button>
+
+      <div class="controls-card" aria-label="Controls">
+        <div class="hint-item">
+          <div class="hint-icon">&#8596;</div>
+          <span>Swipe / A D<br/>Switch Lanes</span>
+        </div>
+        <div class="hint-item">
+          <div class="hint-icon">&#8593;</div>
+          <span>Swipe / Space<br/>Jump</span>
+        </div>
+        <div class="hint-item">
+          <div class="hint-icon">&#8595;</div>
+          <span>Swipe / S<br/>Corgi Sploot</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pause Screen -->
+  <div class="screen-overlay modal-center hidden" id="screen-pause">
+    <div class="modal-card">
+      <h2 class="modal-title">PAUSED</h2>
+      <button class="primary-btn" id="btn-resume">RESUME</button>
+      <button class="secondary-btn" id="btn-restart-pause">RESTART</button>
+    </div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div class="screen-overlay modal-center hidden" id="screen-gameover">
+    <div class="modal-card">
+      <h2 class="modal-title">BONK!</h2>
+      <div class="new-best-badge hidden" id="new-best-badge">NEW BEST SCORE!</div>
+
+      <div class="score-grid">
+        <div class="score-box full">
+          <span class="k">Total Score</span>
+          <span class="v" id="go-score">0</span>
+        </div>
+        <div class="score-box">
+          <span class="k">Golden Bones</span>
+          <span class="v" id="go-bones">0</span>
+        </div>
+        <div class="score-box">
+          <span class="k">Best Score</span>
+          <span class="v" id="go-best">0</span>
+        </div>
+      </div>
+
+      <button class="primary-btn" id="btn-play-again">PLAY AGAIN</button>
+
+      <div class="go-actions">
+        <button class="share-btn" id="btn-share-score">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+          SHARE
+        </button>
+        <button class="card-btn" id="btn-save-card">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          CARD
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * TEMPLE CORGI - Mobile-Optimized 3D Endless Runner (Three.js r128)
+     * =========================================================================
+     * Architecture:
+     * 1. SoundFX       : Pure Web Audio API synthesized sound effects + mute state
+     * 2. CorgiBuilder  : Low-poly stylized 3D Corgi with procedural run/jump/sploot
+     * 3. WorldManager  : Recycled sunlit jungle temple segments, braziers, foliage
+     * 4. EntityManager : Always-solvable obstacles, golden bone arcs, & power-ups
+     * 5. ParticlePool  : Pooled 3D particle bursts (bone sparkles, sploot dust, crash)
+     * 6. GameEngine    : State machine, snappy swipe/key input, physics, HUD updates
+     */
+
+    (function () {
+      'use strict';
+
+      /* =====================================================================
+         1. CONSTANTS & CONFIGURATION
+         ===================================================================== */
+      const LANES = [-2.4, 0, 2.4]; // Left, Center, Right world X coordinates
+      const TRACK_WIDTH = 7.6;
+      const SEGMENT_LENGTH = 16;
+      const NUM_SEGMENTS = 13;
+
+      const BASE_SPEED = 20;
+      const MAX_SPEED = 45;
+      const SPEED_ACCEL = 0.28; // units/sec^2
+
+      const GRAVITY = -46;
+      const JUMP_VELOCITY = 16.2;
+      const FAST_FALL_VELOCITY = -34;
+      const SLIDE_DURATION = 0.72;
+
+      const MAGNET_DURATION = 9.0;
+      const SHIELD_DURATION = 11.0;
+
+      const STORAGE_KEY = 'temple_corgi_best_v1';
+
+      /* =====================================================================
+         2. SYNTHESIZED WEB AUDIO ENGINE
+         ===================================================================== */
+      class SoundFX {
+        constructor() {
+          this.ctx = null;
+          this.muted = false;
+          this.boneCombo = 0;
+          this.lastBoneTime = 0;
+        }
+
+        unlock() {
+          try {
+            if (!this.ctx) {
+              const AudioCtx = window.AudioContext || window.webkitAudioContext;
+              if (AudioCtx) this.ctx = new AudioCtx();
+            }
+            if (this.ctx && this.ctx.state === 'suspended') {
+              this.ctx.resume();
+            }
+          } catch (e) {
+            // Gracefully ignore audio errors on restricted environments
+          }
+        }
+
+        toggleMute() {
+          this.muted = !this.muted;
+          return this.muted;
+        }
+
+        playJump() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            // Cute playful yip / boing
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(290, now);
+            osc.frequency.exponentialRampToValueAtTime(660, now + 0.11);
+            osc.frequency.exponentialRampToValueAtTime(520, now + 0.19);
+
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(0.2, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.21);
+          } catch (e) {}
+        }
+
+        playWhoosh(isSlide = false) {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const duration = isSlide ? 0.24 : 0.12;
+            const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+              data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+            }
+
+            const noise = this.ctx.createBufferSource();
+            noise.buffer = buffer;
+
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(isSlide ? 650 : 1200, now);
+            filter.frequency.exponentialRampToValueAtTime(isSlide ? 220 : 500, now + duration);
+            filter.Q.value = 1.4;
+
+            const gain = this.ctx.createGain();
+            gain.gain.setValueAtTime(isSlide ? 0.22 : 0.14, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+            noise.start(now);
+          } catch (e) {}
+        }
+
+        playBone() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            if (now - this.lastBoneTime < 0.45) {
+              this.boneCombo = Math.min(this.boneCombo + 1, 7);
+            } else {
+              this.boneCombo = 0;
+            }
+            this.lastBoneTime = now;
+
+            // Pentatonic bright chime notes
+            const notes = [587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66, 1318.51, 1567.98];
+            const freq = notes[this.boneCombo];
+
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now);
+            osc.frequency.exponentialRampToValueAtTime(freq * 1.25, now + 0.09);
+
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(0.16, now + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.17);
+          } catch (e) {}
+        }
+
+        playPowerup() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const chord = [523.25, 659.25, 783.99, 1046.5];
+            chord.forEach((freq, idx) => {
+              const t = now + idx * 0.055;
+              const osc = this.ctx.createOscillator();
+              const gain = this.ctx.createGain();
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(freq, t);
+              gain.gain.setValueAtTime(0.001, t);
+              gain.gain.linearRampToValueAtTime(0.14, t + 0.02);
+              gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+              osc.connect(gain);
+              gain.connect(this.ctx.destination);
+              osc.start(t);
+              osc.stop(t + 0.26);
+            });
+          } catch (e) {}
+        }
+
+        playShieldBreak() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(620, now);
+            osc.frequency.exponentialRampToValueAtTime(140, now + 0.28);
+
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.31);
+          } catch (e) {}
+        }
+
+        playCrash() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            // Deep thud
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(38, now + 0.32);
+
+            gain.gain.setValueAtTime(0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.35);
+
+            // Little sad cartoon yip
+            const yip = this.ctx.createOscillator();
+            const yipGain = this.ctx.createGain();
+            yip.type = 'triangle';
+            yip.frequency.setValueAtTime(480, now + 0.06);
+            yip.frequency.exponentialRampToValueAtTime(210, now + 0.28);
+            yipGain.gain.setValueAtTime(0.14, now + 0.06);
+            yipGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            yip.connect(yipGain);
+            yipGain.connect(this.ctx.destination);
+            yip.start(now + 0.06);
+            yip.stop(now + 0.31);
+          } catch (e) {}
+        }
+      }
+
+      /* =====================================================================
+         3. STYLIZED 3D CORGI CHARACTER BUILDER & ANIMATOR
+         ===================================================================== */
+      function createCorgi() {
+        const root = new THREE.Group();
+        const bodyPivot = new THREE.Group();
+        root.add(bodyPivot);
+
+        // Shared Materials
+        const matGinger = new THREE.MeshStandardMaterial({ color: 0xe3883b, roughness: 0.72, metalness: 0.02 });
+        const matGingerDark = new THREE.MeshStandardMaterial({ color: 0xc96f28, roughness: 0.78 });
+        const matWhite = new THREE.MeshStandardMaterial({ color: 0xfffaf0, roughness: 0.7 });
+        const matPink = new THREE.MeshStandardMaterial({ color: 0xf4a4a0, roughness: 0.6 });
+        const matBlack = new THREE.MeshStandardMaterial({ color: 0x1b1918, roughness: 0.25, metalness: 0.1 });
+        const matCollar = new THREE.MeshStandardMaterial({ color: 0xd93025, roughness: 0.45 });
+        const matGold = new THREE.MeshStandardMaterial({ color: 0xffd23f, roughness: 0.25, metalness: 0.7 });
+
+        // --- Elongated Corgi Torso (facing -Z) ---
+        const torsoGroup = new THREE.Group();
+        torsoGroup.position.set(0, 0.72, 0);
+        bodyPivot.add(torsoGroup);
+
+        // Main ginger back/torso
+        const torsoMesh = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.62, 1.48), matGinger);
+        torsoMesh.castShadow = true;
+        torsoMesh.receiveShadow = true;
+        torsoGroup.add(torsoMesh);
+
+        // White fluffy belly
+        const bellyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.22, 1.38), matWhite);
+        bellyMesh.position.set(0, -0.25, 0.02);
+        torsoGroup.add(bellyMesh);
+
+        // Fluffy white chest puff (front)
+        const chestMesh = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), matWhite);
+        chestMesh.scale.set(0.95, 0.92, 0.75);
+        chestMesh.position.set(0, -0.02, -0.68);
+        chestMesh.castShadow = true;
+        torsoGroup.add(chestMesh);
+
+        // Fluffy corgi butt/rump (back)
+        const buttLeft = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), matWhite);
+        buttLeft.position.set(-0.18, -0.06, 0.72);
+        torsoGroup.add(buttLeft);
+
+        const buttRight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), matWhite);
+        buttRight.position.set(0.18, -0.06, 0.72);
+        torsoGroup.add(buttRight);
+
+        const buttTop = new THREE.Mesh(new THREE.SphereGeometry(0.36, 10, 8), matGinger);
+        buttTop.scale.set(1.05, 0.85, 0.75);
+        buttTop.position.set(0, 0.06, 0.68);
+        buttTop.castShadow = true;
+        torsoGroup.add(buttTop);
+
+        // Wagging Nub Tail
+        const tailPivot = new THREE.Group();
+        tailPivot.position.set(0, 0.16, 0.84);
+        torsoGroup.add(tailPivot);
+
+        const tailMesh = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), matWhite);
+        tailMesh.scale.set(0.9, 1.25, 1.15);
+        tailMesh.position.set(0, 0.06, 0.06);
+        tailPivot.add(tailMesh);
+
+        // Red Collar & Gold Tag
+        const collar = new THREE.Mesh(new THREE.TorusGeometry(0.37, 0.065, 8, 16), matCollar);
+        collar.rotation.x = Math.PI * 0.42;
+        collar.position.set(0, 0.14, -0.62);
+        torsoGroup.add(collar);
+
+        const tag = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.03, 10), matGold);
+        tag.rotation.x = Math.PI * 0.5;
+        tag.position.set(0, -0.18, -0.94);
+        torsoGroup.add(tag);
+
+        // --- Head Group ---
+        const headGroup = new THREE.Group();
+        headGroup.position.set(0, 0.44, -0.78);
+        torsoGroup.add(headGroup);
+
+        // Main skull
+        const skull = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.64, 0.68), matGinger);
+        skull.castShadow = true;
+        headGroup.add(skull);
+
+        // White facial blaze stripe
+        const blaze = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.42, 0.06), matWhite);
+        blaze.position.set(0, 0.04, -0.33);
+        headGroup.add(blaze);
+
+        // Fluffy white cheeks
+        const cheekGeo = new THREE.BoxGeometry(0.82, 0.28, 0.46);
+        const cheeks = new THREE.Mesh(cheekGeo, matWhite);
+        cheeks.position.set(0, -0.16, -0.14);
+        headGroup.add(cheeks);
+
+        // White Muzzle
+        const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.26, 0.34), matWhite);
+        muzzle.position.set(0, -0.14, -0.46);
+        muzzle.castShadow = true;
+        headGroup.add(muzzle);
+
+        // Cute Black Nose
+        const nose = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.11, 0.1), matBlack);
+        nose.position.set(0, -0.05, -0.63);
+        headGroup.add(nose);
+
+        // Happy little pink tongue
+        const tongue = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.12, 0.06), matPink);
+        tongue.position.set(0, -0.27, -0.54);
+        tongue.rotation.x = -0.35;
+        headGroup.add(tongue);
+
+        // Shiny Black Eyes with White Sparkles
+        const eyeGeo = new THREE.SphereGeometry(0.075, 8, 8);
+        const sparkleGeo = new THREE.SphereGeometry(0.025, 6, 6);
+        [-1, 1].forEach((side) => {
+          const eye = new THREE.Mesh(eyeGeo, matBlack);
+          eye.position.set(side * 0.21, 0.06, -0.34);
+          headGroup.add(eye);
+
+          const sparkle = new THREE.Mesh(sparkleGeo, matWhite);
+          sparkle.position.set(side * 0.21 + 0.02, 0.09, -0.4);
+          headGroup.add(sparkle);
+        });
+
+        // Big Pointy Corgi Ears (pivoted at base for bounce/pin-back)
+        const ears = [];
+        [-1, 1].forEach((side) => {
+          const earPivot = new THREE.Group();
+          earPivot.position.set(side * 0.26, 0.28, -0.02);
+          earPivot.rotation.z = -side * 0.22;
+          headGroup.add(earPivot);
+
+          const outerEar = new THREE.Mesh(new THREE.ConeGeometry(0.21, 0.52, 4), matGingerDark);
+          outerEar.position.set(0, 0.24, 0);
+          outerEar.rotation.y = Math.PI * 0.25;
+          outerEar.scale.set(1.0, 1.0, 0.52);
+          outerEar.castShadow = true;
+          earPivot.add(outerEar);
+
+          const innerEar = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.36, 4), matPink);
+          innerEar.position.set(0, 0.21, -0.055);
+          innerEar.rotation.y = Math.PI * 0.25;
+          innerEar.scale.set(1.0, 1.0, 0.35);
+          earPivot.add(innerEar);
+
+          ears.push(earPivot);
+        });
+
+        // --- Four Stubby Corgi Legs with White Paws ---
+        function makeLeg(x, z) {
+          const pivot = new THREE.Group();
+          pivot.position.set(x, 0.44, z);
+
+          const upper = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.32, 0.24), matGinger);
+          upper.position.set(0, -0.14, 0);
+          upper.castShadow = true;
+          pivot.add(upper);
+
+          const paw = new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.16, 0.29), matWhite);
+          paw.position.set(0, -0.34, -0.03);
+          paw.castShadow = true;
+          pivot.add(paw);
+
+          bodyPivot.add(pivot);
+          return pivot;
+        }
+
+        const legFL = makeLeg(-0.26, -0.46);
+        const legFR = makeLeg(0.26, -0.46);
+        const legBL = makeLeg(-0.26, 0.48);
+        const legBR = makeLeg(0.26, 0.48);
+
+        // --- Shield Aura Sphere (hidden unless Shield power-up active) ---
+        const shieldMat = new THREE.MeshStandardMaterial({
+          color: 0x38e8ff,
+          emissive: 0x1cb8ff,
+          emissiveIntensity: 0.6,
+          transparent: true,
+          opacity: 0.28,
+          roughness: 0.15,
+          metalness: 0.2
+        });
+        const shieldMesh = new THREE.Mesh(new THREE.SphereGeometry(1.32, 16, 12), shieldMat);
+        shieldMesh.position.set(0, 0.85, -0.08);
+        shieldMesh.visible = false;
+        root.add(shieldMesh);
+
+        // --- Magnet Ring Aura (subtle pulsing ring around corgi when active) ---
+        const magnetRingMat = new THREE.MeshBasicMaterial({
+          color: 0xff4fd8,
+          transparent: true,
+          opacity: 0.65,
+          side: THREE.DoubleSide
+        });
+        const magnetRing = new THREE.Mesh(new THREE.RingGeometry(0.95, 1.12, 24), magnetRingMat);
+        magnetRing.rotation.x = -Math.PI / 2;
+        magnetRing.position.set(0, 0.08, 0);
+        magnetRing.visible = false;
+        root.add(magnetRing);
+
+        // --- Blob Shadow directly underneath corgi (stays grounded when jumping!) ---
+        const shadowMat = new THREE.MeshBasicMaterial({
+          color: 0x0a140d,
+          transparent: true,
+          opacity: 0.38,
+          depthWrite: false
+        });
+        const groundShadow = new THREE.Mesh(new THREE.CircleGeometry(0.75, 16), shadowMat);
+        groundShadow.rotation.x = -Math.PI / 2;
+        groundShadow.position.set(0, 0.03, 0);
+
+        return {
+          root,
+          bodyPivot,
+          torsoGroup,
+          headGroup,
+          tailPivot,
+          ears,
+          legs: { fl: legFL, fr: legFR, bl: legBL, br: legBR },
+          shieldMesh,
+          magnetRing,
+          groundShadow,
+          runCycle: 0
+        };
+      }
+
+      /* =====================================================================
+         4. SHARED ASSETS & PROCEDURAL TEMPLE WORLD BUILDER
+         ===================================================================== */
+      function createSharedMaterials() {
+        return {
+          stonePath: new THREE.MeshStandardMaterial({ color: 0xb8a382, roughness: 0.88 }),
+          stoneDark: new THREE.MeshStandardMaterial({ color: 0x736958, roughness: 0.92 }),
+          stoneTrim: new THREE.MeshStandardMaterial({ color: 0x99876c, roughness: 0.85 }),
+          moss: new THREE.MeshStandardMaterial({ color: 0x4b7d3b, roughness: 0.9 }),
+          foliageLight: new THREE.MeshStandardMaterial({ color: 0x3b8c3e, roughness: 0.8 }),
+          foliageDark: new THREE.MeshStandardMaterial({ color: 0x225c2c, roughness: 0.85 }),
+          trunk: new THREE.MeshStandardMaterial({ color: 0x6b4a2e, roughness: 0.92 }),
+          log: new THREE.MeshStandardMaterial({ color: 0x613e22, roughness: 0.92 }),
+          gold: new THREE.MeshStandardMaterial({
+            color: 0xffd54a,
+            emissive: 0x8a5200,
+            emissiveIntensity: 0.35,
+            roughness: 0.25,
+            metalness: 0.78
+          }),
+          fireOuter: new THREE.MeshBasicMaterial({ color: 0xff6a1a }),
+          fireInner: new THREE.MeshBasicMaterial({ color: 0xffe45e }),
+          brazierBowl: new THREE.MeshStandardMaterial({ color: 0x3d3832, roughness: 0.7, metalness: 0.4 }),
+          totemAccent: new THREE.MeshStandardMaterial({ color: 0x2fa88d, roughness: 0.65 }),
+          magnetRed: new THREE.MeshStandardMaterial({ color: 0xff3b7f, emissive: 0x700028, roughness: 0.3 }),
+          magnetTip: new THREE.MeshStandardMaterial({ color: 0xe6ecf5, roughness: 0.25, metalness: 0.7 }),
+          shieldGem: new THREE.MeshStandardMaterial({
+            color: 0x38e8ff,
+            emissive: 0x0d7a99,
+            emissiveIntensity: 0.55,
+            roughness: 0.2,
+            metalness: 0.3
+          })
+        };
+      }
+
+      function createTempleSegment(mats, flameList) {
+        const seg = new THREE.Group();
+
+        // Main stone bridge deck
+        const deck = new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH, 1.4, SEGMENT_LENGTH), mats.stonePath);
+        deck.position.set(0, -0.7, 0);
+        deck.receiveShadow = true;
+        seg.add(deck);
+
+        // Under-bridge ancient stone support beam
+        const underBeam = new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH - 1.2, 6.0, 2.2), mats.stoneDark);
+        underBeam.position.set(0, -4.4, 0);
+        seg.add(underBeam);
+
+        // Subtle stone slab lane dividers
+        const dividerGeo = new THREE.BoxGeometry(0.14, 0.04, SEGMENT_LENGTH - 0.3);
+        [-1.2, 1.2].forEach((x) => {
+          const line = new THREE.Mesh(dividerGeo, mats.stoneDark);
+          line.position.set(x, 0.02, 0);
+          line.receiveShadow = true;
+          seg.add(line);
+        });
+
+        // Decorative cross-slab cracks for speed sense
+        const crossGeo = new THREE.BoxGeometry(TRACK_WIDTH - 0.5, 0.03, 0.14);
+        [-4, 4].forEach((z) => {
+          const cross = new THREE.Mesh(crossGeo, mats.stoneDark);
+          cross.position.set(0, 0.015, z);
+          cross.receiveShadow = true;
+          seg.add(cross);
+        });
+
+        // Flanking Ancient Stone Parapet Walls
+        const wallGeo = new THREE.BoxGeometry(0.85, 1.1, SEGMENT_LENGTH);
+        [-1, 1].forEach((side) => {
+          const wx = side * (TRACK_WIDTH / 2 + 0.42);
+          const wall = new THREE.Mesh(wallGeo, mats.stoneTrim);
+          wall.position.set(wx, 0.25, 0);
+          wall.castShadow = true;
+          wall.receiveShadow = true;
+          seg.add(wall);
+
+          // Moss patches on wall
+          const moss = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.2, 2.8), mats.moss);
+          moss.position.set(wx, 0.82, side * 3.2);
+          seg.add(moss);
+
+          // Carved Temple Pillar at segment edge
+          const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.3, 4.4, 1.3), mats.stoneDark);
+          pillar.position.set(wx + side * 0.2, 1.8, -SEGMENT_LENGTH / 2 + 1.5);
+          pillar.castShadow = true;
+          seg.add(pillar);
+
+          // Pillar capital top
+          const cap = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.45, 1.65), mats.stoneTrim);
+          cap.position.set(wx + side * 0.2, 4.1, -SEGMENT_LENGTH / 2 + 1.5);
+          seg.add(cap);
+
+          // Flickering Fire Brazier atop every pillar
+          const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.28, 0.42, 7), mats.brazierBowl);
+          bowl.position.set(wx + side * 0.2, 4.5, -SEGMENT_LENGTH / 2 + 1.5);
+          seg.add(bowl);
+
+          const flameGroup = new THREE.Group();
+          flameGroup.position.set(wx + side * 0.2, 4.78, -SEGMENT_LENGTH / 2 + 1.5);
+          const outerFlame = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.85, 5), mats.fireOuter);
+          outerFlame.position.y = 0.35;
+          flameGroup.add(outerFlame);
+          const innerFlame = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.55, 5), mats.fireInner);
+          innerFlame.position.y = 0.26;
+          flameGroup.add(innerFlame);
+          flameGroup.userData.phase = Math.random() * Math.PI * 2;
+          seg.add(flameGroup);
+          flameList.push(flameGroup);
+
+          // Stylized Palm Tree & Jungle Foliage rising from outside the temple bridge
+          const palmGroup = new THREE.Group();
+          const pz = (Math.random() - 0.5) * 10;
+          const px = side * (TRACK_WIDTH / 2 + 3.2 + Math.random() * 2.5);
+          palmGroup.position.set(px, -3.5, pz);
+
+          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.42, 9.5, 6), mats.trunk);
+          trunk.position.y = 4.5;
+          trunk.rotation.z = -side * (0.14 + Math.random() * 0.12);
+          palmGroup.add(trunk);
+
+          const crown = new THREE.Group();
+          crown.position.set(-side * 1.1, 9.1, 0);
+          for (let f = 0; f < 5; f++) {
+            const frond = new THREE.Mesh(
+              new THREE.ConeGeometry(0.7, 3.2, 4),
+              f % 2 === 0 ? mats.foliageLight : mats.foliageDark
+            );
+            frond.scale.set(0.9, 1.0, 0.22);
+            const ang = (f / 5) * Math.PI * 2 + Math.random() * 0.4;
+            frond.rotation.y = ang;
+            frond.rotation.x = 1.15;
+            frond.position.set(Math.sin(ang) * 1.1, 0, Math.cos(ang) * 1.1);
+            crown.add(frond);
+          }
+          palmGroup.add(crown);
+          seg.add(palmGroup);
+
+          // Low fern bush hugging the outer wall
+          const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(1.15, 0), mats.foliageDark);
+          bush.scale.set(1.2, 0.75, 1.3);
+          bush.position.set(side * (TRACK_WIDTH / 2 + 1.5), 0.1, 3.5);
+          seg.add(bush);
+        });
+
+        return seg;
+      }
+
+      /* =====================================================================
+         5. OBSTACLE, GOLDEN BONE, & POWER-UP MESH FACTORIES
+         ===================================================================== */
+      function createObstacleMesh(type, mats) {
+        const g = new THREE.Group();
+
+        if (type === 'low') {
+          // Fallen mossy jungle log / low carved stone hurdle (Jump Over!)
+          const log = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 2.05, 8), mats.log);
+          log.rotation.z = Math.PI / 2;
+          log.position.y = 0.46;
+          log.castShadow = true;
+          log.receiveShadow = true;
+          g.add(log);
+
+          // Moss cap for contrast & readability
+          const moss = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.18, 0.55), mats.moss);
+          moss.position.set(0, 0.88, 0);
+          g.add(moss);
+
+          // Stone end-supports
+          [-0.92, 0.92].forEach((x) => {
+            const cap = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.85, 0.65), mats.stoneDark);
+            cap.position.set(x, 0.42, 0);
+            cap.castShadow = true;
+            g.add(cap);
+          });
+        } else if (type === 'high') {
+          // Overhead temple stone beam / archway (Corgi Sploot / Slide Under!)
+          [-1.05, 1.05].forEach((x) => {
+            const post = new THREE.Mesh(new THREE.BoxGeometry(0.32, 3.0, 0.46), mats.stoneDark);
+            post.position.set(x, 1.5, 0);
+            post.castShadow = true;
+            g.add(post);
+          });
+
+          // Heavy overhead carved stone lintel (bottom clearance at y = 1.12)
+          const beam = new THREE.Mesh(new THREE.BoxGeometry(2.45, 1.15, 0.72), mats.stoneTrim);
+          beam.position.set(0, 1.72, 0);
+          beam.castShadow = true;
+          beam.receiveShadow = true;
+          g.add(beam);
+
+          // Turquoise carved temple stripe & hanging moss vines for clear visual cue
+          const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.24, 0.76), mats.totemAccent);
+          stripe.position.set(0, 1.72, 0);
+          g.add(stripe);
+
+          [-0.65, 0, 0.65].forEach((vx) => {
+            const vine = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.42, 4), mats.moss);
+            vine.rotation.x = Math.PI;
+            vine.position.set(vx, 1.06, 0.25);
+            g.add(vine);
+          });
+        } else {
+          // Tall carved temple totem / mossy boulder (Switch Lanes!)
+          const base = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 1.4), mats.stoneDark);
+          base.position.y = 0.25;
+          base.castShadow = true;
+          g.add(base);
+
+          const body = new THREE.Mesh(new THREE.BoxGeometry(1.25, 2.2, 1.1), mats.stoneTrim);
+          body.position.y = 1.55;
+          body.castShadow = true;
+          g.add(body);
+
+          // Carved glowing jade/turquoise eyes on totem face
+          [-0.28, 0.28].forEach((ex) => {
+            const eye = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.24, 0.14), mats.totemAccent);
+            eye.position.set(ex, 1.95, 0.56);
+            g.add(eye);
+          });
+
+          const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.22, 0.14), mats.stoneDark);
+          mouth.position.set(0, 1.35, 0.56);
+          g.add(mouth);
+
+          const crown = new THREE.Mesh(new THREE.ConeGeometry(0.85, 0.75, 4), mats.moss);
+          crown.rotation.y = Math.PI * 0.25;
+          crown.position.y = 2.95;
+          g.add(crown);
+        }
+
+        return g;
+      }
+
+      function createGoldenBoneMesh(mats) {
+        const g = new THREE.Group();
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.62, 7), mats.gold);
+        shaft.rotation.z = Math.PI / 2;
+        g.add(shaft);
+
+        const knobGeo = new THREE.SphereGeometry(0.145, 7, 7);
+        [
+          [-0.31, 0.09],
+          [-0.31, -0.09],
+          [0.31, 0.09],
+          [0.31, -0.09]
+        ].forEach(([x, y]) => {
+          const knob = new THREE.Mesh(knobGeo, mats.gold);
+          knob.position.set(x, y, 0);
+          g.add(knob);
+        });
+
+        g.rotation.z = 0.35;
+        return g;
+      }
+
+      function createPowerupMesh(type, mats) {
+        const g = new THREE.Group();
+
+        if (type === 'magnet') {
+          // Stylized U-shaped magnet
+          const arc = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.11, 8, 14, Math.PI), mats.magnetRed);
+          arc.position.y = 0.12;
+          g.add(arc);
+
+          [-0.34, 0.34].forEach((x) => {
+            const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.24, 8), mats.magnetTip);
+            tip.position.set(x, -0.02, 0);
+            g.add(tip);
+          });
+        } else {
+          // Glowing cyan Temple Shield crystal
+          const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.48, 0), mats.shieldGem);
+          gem.scale.set(0.85, 1.15, 0.85);
+          g.add(gem);
+        }
+
+        // Halo ring around power-up
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: type === 'magnet' ? 0xff4fd8 : 0x38e8ff,
+          transparent: true,
+          opacity: 0.55,
+          side: THREE.DoubleSide
+        });
+        const halo = new THREE.Mesh(new THREE.TorusGeometry(0.66, 0.04, 6, 18), ringMat);
+        g.add(halo);
+
+        return g;
+      }
+
+      /* =====================================================================
+         6. MAIN GAME ENGINE
+         ===================================================================== */
+      class TempleCorgiGame {
+        constructor() {
+          this.container = document.getElementById('game-container');
+          this.sfx = new SoundFX();
+
+          // UI references
+          this.ui = {
+            hud: document.getElementById('hud'),
+            hudScore: document.getElementById('hud-score'),
+            hudBones: document.getElementById('hud-bones'),
+            hudChallenge: document.getElementById('hud-challenge'),
+            hudChallengeLabel: document.getElementById('hud-challenge-label'),
+            hudChallengeVal: document.getElementById('hud-challenge-val'),
+            powerupContainer: document.getElementById('powerup-container'),
+            toast: document.getElementById('toast-banner'),
+            screenStart: document.getElementById('screen-start'),
+            screenPause: document.getElementById('screen-pause'),
+            screenGameOver: document.getElementById('screen-gameover'),
+            startMuteWrap: document.getElementById('start-mute-wrap'),
+            startBestScore: document.getElementById('start-best-score'),
+            challengeBanner: document.getElementById('challenge-banner'),
+            challengeBannerText: document.getElementById('challenge-banner-text'),
+            goScore: document.getElementById('go-score'),
+            goBones: document.getElementById('go-bones'),
+            goBest: document.getElementById('go-best'),
+            newBestBadge: document.getElementById('new-best-badge')
+          };
+
+          // Game State
+          this.state = 'MENU'; // MENU | PLAYING | PAUSED | GAMEOVER
+          this.speed = BASE_SPEED;
+          this.distance = 0;
+          this.bonesCollected = 0;
+          this.bestScore = this.loadBestScore();
+          this.ui.startBestScore.textContent = this.bestScore.toLocaleString();
+
+          // Parse incoming friend challenge from URL (?beat=1250&bones=30)
+          this.challengeTarget = this.parseChallengeParam();
+          this.challengeBeaten = false;
+          if (this.challengeTarget > 0) {
+            this.ui.challengeBanner.classList.remove('hidden');
+            this.ui.challengeBannerText.textContent = `Beat ${this.challengeTarget.toLocaleString()} Points!`;
+          }
+        }
+
+        saveBestScore(score) {
+          try {
+            localStorage.setItem(STORAGE_KEY, String(score));
+          } catch (e) {}
+        }
+
+        parseChallengeParam() {
+          try {
+            const params = new URLSearchParams(window.location.search);
+            const val = parseInt(params.get('beat') || '0', 10);
+            return Number.isFinite(val) && val > 0 ? val : 0;
+          } catch (e) {
+            return 0;
+          }
+        }
+
+        buildShareUrl(score, bones) {
+          try {
+            if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+              const url = new URL(window.location.href);
+              url.search = '';
+              if (score > 0) {
+                url.searchParams.set('beat', String(score));
+                if (bones > 0) url.searchParams.set('bones', String(bones));
+              }
+              return url.toString();
+            }
+          } catch (e) {}
+          return '';
+        }
+
+        copyTextToClipboard(text) {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.top = '-9999px';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return ok;
+          } catch (e) {
+            return false;
+          }
+        }
+
+        async shareResult(fromStart = false) {
+          const score = fromStart ? this.bestScore : this.getTotalScore();
+          const bones = fromStart ? 0 : this.bonesCollected;
+          const shareUrl = this.buildShareUrl(score, bones);
+
+          let text;
+          if (score > 0) {
+            text = `🐕 Temple Corgi Run!\n🏆 Score: ${score.toLocaleString()}` +
+              (bones > 0 ? `\n🦴 Golden Bones: ${bones.toLocaleString()}` : '') +
+              `\nCan you beat my Corgi sploot? 🌴🔥`;
+          } else {
+            text = `🐕 Come play Temple Corgi — a 3D jungle temple endless runner! 🌴🔥`;
+          }
+
+          const fullCopyText = shareUrl ? `${text}\n${shareUrl}` : text;
+
+          // Use native mobile share sheet if available
+          if (navigator.share) {
+            try {
+              const payload = { title: 'Temple Corgi - 3D Endless Runner', text };
+              if (shareUrl) payload.url = shareUrl;
+              await navigator.share(payload);
+              return;
+            } catch (err) {
+              // Ignore if user dismissed the share sheet
+              if (err && err.name === 'AbortError') return;
+            }
+          }
+
+          // Fallback: copy formatted challenge text + link to clipboard
+          if (this.copyTextToClipboard(fullCopyText)) {
+            this.showToast(shareUrl ? 'CHALLENGE LINK COPIED!' : 'SCORE COPIED!', '#6ff7ff');
+          } else {
+            this.showToast('READY TO SHARE!', '#ffe57f');
+          }
+        }
+
+        generateScoreCardCanvas() {
+          const w = 1080;
+          const h = 1350;
+          const c = document.createElement('canvas');
+          c.width = w;
+          c.height = h;
+          const ctx = c.getContext('2d');
+
+          // Sunlit Jungle Gradient Background
+          const bg = ctx.createLinearGradient(0, 0, 0, h);
+          bg.addColorStop(0, '#244b37');
+          bg.addColorStop(0.55, '#173123');
+          bg.addColorStop(1, '#0e1f16');
+          ctx.fillStyle = bg;
+          ctx.fillRect(0, 0, w, h);
+
+          // Warm sunlit radial glow behind Corgi emblem
+          const glow = ctx.createRadialGradient(w / 2, 430, 30, w / 2, 430, 360);
+          glow.addColorStop(0, 'rgba(255, 209, 71, 0.34)');
+          glow.addColorStop(1, 'rgba(255, 209, 71, 0)');
+          ctx.fillStyle = glow;
+          ctx.fillRect(0, 0, w, h);
+
+          // Gold Temple Frame Border
+          ctx.strokeStyle = 'rgba(255, 209, 71, 0.65)';
+          ctx.lineWidth = 14;
+          ctx.strokeRect(42, 42, w - 84, h - 84);
+
+          // Top Badge
+          ctx.fillStyle = '#ffe394';
+          ctx.font = '800 32px Nunito, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('ANCIENT JUNGLE DASH', w / 2, 130);
+
+          // Title
+          ctx.fillStyle = '#fff6dc';
+          ctx.font = '700 94px Fredoka, sans-serif';
+          ctx.fillText('TEMPLE CORGI', w / 2, 232);
+
+          // Stylized Vector Corgi Face Emblem
+          const cx = w / 2;
+          const cy = 445;
+
+          // Ears
+          ctx.fillStyle = '#c96f28';
+          ctx.beginPath();
+          ctx.moveTo(cx - 125, cy - 30);
+          ctx.lineTo(cx - 165, cy - 175);
+          ctx.lineTo(cx - 35, cy - 95);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.moveTo(cx + 125, cy - 30);
+          ctx.lineTo(cx + 165, cy - 175);
+          ctx.lineTo(cx + 35, cy - 95);
+          ctx.closePath();
+          ctx.fill();
+
+          // Inner pink ears
+          ctx.fillStyle = '#f4a4a0';
+          ctx.beginPath();
+          ctx.moveTo(cx - 110, cy - 45);
+          ctx.lineTo(cx - 140, cy - 140);
+          ctx.lineTo(cx - 58, cy - 88);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.moveTo(cx + 110, cy - 45);
+          ctx.lineTo(cx + 140, cy - 140);
+          ctx.lineTo(cx + 58, cy - 88);
+          ctx.closePath();
+          ctx.fill();
+
+          // Head circle
+          ctx.fillStyle = '#e3883b';
+          ctx.beginPath();
+          ctx.arc(cx, cy, 135, 0, Math.PI * 2);
+          ctx.fill();
+
+          // White cheeks & muzzle
+          ctx.fillStyle = '#fffaf0';
+          ctx.beginPath();
+          ctx.ellipse(cx, cy + 48, 128, 86, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillRect(cx - 22, cy - 110, 44, 115);
+
+          // Eyes
+          ctx.fillStyle = '#1b1918';
+          ctx.beginPath();
+          ctx.arc(cx - 54, cy - 12, 16, 0, Math.PI * 2);
+          ctx.arc(cx + 54, cy - 12, 16, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Eye sparkles
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(cx - 48, cy - 18, 5, 0, Math.PI * 2);
+          ctx.arc(cx + 60, cy - 18, 5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Nose & Happy Tongue
+          ctx.fillStyle = '#1b1918';
+          ctx.beginPath();
+          ctx.ellipse(cx, cy + 32, 24, 16, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#f48984';
+          ctx.beginPath();
+          ctx.ellipse(cx, cy + 78, 22, 28, 0, 0, Math.PI);
+          ctx.fill();
+
+          // Score Card Box
+          const score = this.getTotalScore();
+          ctx.fillStyle = 'rgba(12, 22, 16, 0.78)';
+          ctx.strokeStyle = 'rgba(255, 209, 71, 0.5)';
+          ctx.lineWidth = 5;
+          ctx.fillRect(110, 650, w - 220, 460);
+          ctx.strokeRect(110, 650, w - 220, 460);
+
+          ctx.fillStyle = '#d7cca8';
+          ctx.font = '800 34px Nunito, sans-serif';
+          ctx.fillText('TOTAL SCORE', w / 2, 730);
+
+          ctx.fillStyle = '#ffd147';
+          ctx.font = '700 132px Fredoka, sans-serif';
+          ctx.fillText(score.toLocaleString(), w / 2, 868);
+
+          // Bones & Best row
+          ctx.fillStyle = '#d7cca8';
+          ctx.font = '800 28px Nunito, sans-serif';
+          ctx.fillText('GOLDEN BONES', w / 2 - 200, 965);
+          ctx.fillText('BEST SCORE', w / 2 + 200, 965);
+
+          ctx.fillStyle = '#fff8e7';
+          ctx.font = '700 62px Fredoka, sans-serif';
+          ctx.fillText(this.bonesCollected.toLocaleString(), w / 2 - 200, 1042);
+          ctx.fillText(this.bestScore.toLocaleString(), w / 2 + 200, 1042);
+
+          // Call-to-action footer
+          ctx.fillStyle = '#6ff7ff';
+          ctx.font = '700 44px Fredoka, sans-serif';
+          ctx.fillText('CAN YOU BEAT MY RUN?', w / 2, 1225);
+
+          return c;
+        }
+
+        async downloadScoreCard() {
+          try {
+            const cardCanvas = this.generateScoreCardCanvas();
+            const dataUrl = cardCanvas.toDataURL('image/png');
+
+            // On supported mobile browsers, try sharing the image file directly
+            if (navigator.canShare && typeof File !== 'undefined') {
+              try {
+                const res = await fetch(dataUrl);
+                const blob = await res.blob();
+                const file = new File([blob], 'temple-corgi-score.png', { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                  await navigator.share({
+                    title: 'Temple Corgi Score Card',
+                    text: `I scored ${this.getTotalScore().toLocaleString()} in Temple Corgi!`,
+                    files: [file]
+                  });
+                  return;
+                }
+              } catch (err) {
+                if (err && err.name === 'AbortError') return;
+              }
+            }
+
+            // Standard PNG download fallback
+            const link = document.createElement('a');
+            link.download = `temple-corgi-${this.getTotalScore()}.png`;
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            this.showToast('SCORE CARD SAVED!', '#ffe57f');
+          } catch (e) {
+            this.showToast('COULD NOT SAVE CARD', '#ff8080');
+          }
+        }
+
+        initThree() {
+          this.scene = new THREE.Scene();
+
+          // Warm golden sunlit jungle atmosphere
+          this.scene.background = new THREE.Color(0x88c9b8);
+          this.scene.fog = new THREE.Fog(0x9ed4ba, 42, 138);
+
+          // Camera (responsive FOV adjusted in onResize)
+          this.camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.2, 180);
+          this.camera.position.set(0, 4.3, 7.6);
+          this.camera.lookAt(0, 1.4, -8);
+
+          // Renderer (capped DPR for crisp 60fps mobile performance)
+          this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+          this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          this.renderer.setSize(window.innerWidth, window.innerHeight);
+          this.renderer.shadowMap.enabled = true;
+          this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+          this.container.appendChild(this.renderer.domElement);
+
+          // Lighting: Warm Sunlight + Jungle Bounce
+          const hemiLight = new THREE.HemisphereLight(0xfff4d6, 0x265436, 0.88);
+          this.scene.add(hemiLight);
+
+          const sunLight = new THREE.DirectionalLight(0xffe1a8, 1.15);
+          sunLight.position.set(16, 28, 14);
+          sunLight.castShadow = true;
+          sunLight.shadow.mapSize.width = 1024;
+          sunLight.shadow.mapSize.height = 1024;
+          sunLight.shadow.camera.near = 5;
+          sunLight.shadow.camera.far = 70;
+          sunLight.shadow.camera.left = -14;
+          sunLight.shadow.camera.right = 14;
+          sunLight.shadow.camera.top = 18;
+          sunLight.shadow.camera.bottom = -22;
+          sunLight.shadow.bias = -0.001;
+          this.scene.add(sunLight);
+
+          // Sun disc in the distant golden sky
+          const sunDisc = new THREE.Mesh(
+            new THREE.CircleGeometry(14, 24),
+            new THREE.MeshBasicMaterial({ color: 0xfff2b2, fog: false })
+          );
+          sunDisc.position.set(22, 34, -135);
+          this.scene.add(sunDisc);
+
+          // Distant misty jungle canopy floor below the elevated temple bridge
+          const abyssFloor = new THREE.Mesh(
+            new THREE.PlaneGeometry(260, 260),
+            new THREE.MeshStandardMaterial({ color: 0x1e4d33, roughness: 1.0 })
+          );
+          abyssFloor.rotation.x = -Math.PI / 2;
+          abyssFloor.position.set(0, -11, -60);
+          this.scene.add(abyssFloor);
+
+          this.onResize();
+        }
+
+        initWorld() {
+          this.mats = createSharedMaterials();
+
+          // Create Corgi
+          this.corgi = createCorgi();
+          this.scene.add(this.corgi.root);
+          this.scene.add(this.corgi.groundShadow);
+
+          // Create Recycled Temple Track Segments
+          for (let i = 0; i < NUM_SEGMENTS; i++) {
+            const seg = createTempleSegment(this.mats, this.flames);
+            seg.position.z = 16 - i * SEGMENT_LENGTH;
+            this.scene.add(seg);
+            this.segments.push(seg);
+          }
+
+          // Pooled 3D Particles
+          const pGeo = new THREE.BoxGeometry(0.18, 0.18, 0.18);
+          for (let i = 0; i < 65; i++) {
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffd147, transparent: true, opacity: 1 });
+            const mesh = new THREE.Mesh(pGeo, mat);
+            mesh.visible = false;
+            this.scene.add(mesh);
+            this.particles.push({
+              mesh,
+              active: false,
+              vx: 0,
+              vy: 0,
+              vz: 0,
+              life: 0,
+              maxLife: 0.5
+            });
+          }
+        }
+
+        /* ===================================================================
+           INPUT & UI EVENT BINDINGS
+           =================================================================== */
+        initEvents() {
+          window.addEventListener('resize', () => this.onResize());
+
+          // Buttons
+          document.getElementById('btn-play').addEventListener('click', () => {
+            this.sfx.unlock();
+            this.startGame();
+          });
+
+          document.getElementById('btn-play-again').addEventListener('click', () => {
+            this.sfx.unlock();
+            this.startGame();
+          });
+
+          document.getElementById('btn-pause').addEventListener('click', () => this.togglePause());
+          document.getElementById('btn-resume').addEventListener('click', () => this.togglePause());
+          document.getElementById('btn-restart-pause').addEventListener('click', () => {
+            this.sfx.unlock();
+            this.startGame();
+          });
+
+          const handleMute = () => {
+            this.sfx.unlock();
+            const isMuted = this.sfx.toggleMute();
+            document.querySelectorAll('.icon-sound-on').forEach((el) => (el.style.display = isMuted ? 'none' : 'block'));
+            document.querySelectorAll('.icon-sound-off').forEach((el) => (el.style.display = isMuted ? 'block' : 'none'));
+          };
+          document.getElementById('btn-mute-hud').addEventListener('click', handleMute);
+          document.getElementById('btn-mute-start').addEventListener('click', handleMute);
+
+          // Share & Score Card Buttons
+          document.getElementById('btn-share-start').addEventListener('click', () => {
+            this.sfx.unlock();
+            this.shareResult(true);
+          });
+          document.getElementById('btn-share-score').addEventListener('click', () => {
+            this.sfx.unlock();
+            this.shareResult(false);
+          });
+          document.getElementById('btn-save-card').addEventListener('click', () => {
+            this.sfx.unlock();
+            this.downloadScoreCard();
+          });
+
+          // Keyboard controls (Desktop)
+          window.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+              e.preventDefault();
+            }
+            this.sfx.unlock();
+
+            if (e.code === 'Escape' || e.code === 'KeyP') {
+              if (this.state === 'PLAYING' || this.state === 'PAUSED') this.togglePause();
+              return;
+            }
+
+            if (this.state === 'MENU' && (e.code === 'Space' || e.code === 'Enter')) {
+              this.startGame();
+              return;
+            }
+
+            if (this.state === 'GAMEOVER' && (e.code === 'Space' || e.code === 'Enter')) {
+              this.startGame();
+              return;
+            }
+
+            if (this.state !== 'PLAYING') return;
+
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.moveLane(-1);
+            else if (e.code === 'ArrowRight' || e.code === 'KeyD') this.moveLane(1);
+            else if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') this.jump();
+            else if (e.code === 'ArrowDown' || e.code === 'KeyS') this.slide();
+          });
+
+          // Low-Latency Mobile Touch Swipe Controls
+          let touchStartX = 0;
+          let touchStartY = 0;
+          let swipeHandled = false;
+          const SWIPE_THRESHOLD = 26; // Snappy threshold in px
+
+          const canvas = this.renderer.domElement;
+
+          canvas.addEventListener(
+            'touchstart',
+            (e) => {
+              if (e.touches.length === 0) return;
+              this.sfx.unlock();
+              touchStartX = e.touches[0].clientX;
+              touchStartY = e.touches[0].clientY;
+              swipeHandled = false;
+            },
+            { passive: true }
+          );
+
+          canvas.addEventListener(
+            'touchmove',
+            (e) => {
+              if (this.state !== 'PLAYING' || swipeHandled || e.touches.length === 0) return;
+              const dx = e.touches[0].clientX - touchStartX;
+              const dy = e.touches[0].clientY - touchStartY;
+
+              if (Math.abs(dx) > SWIPE_THRESHOLD || Math.abs(dy) > SWIPE_THRESHOLD) {
+                swipeHandled = true;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                  this.moveLane(dx > 0 ? 1 : -1);
+                } else {
+                  if (dy < 0) this.jump();
+                  else this.slide();
+                }
+              }
+            },
+            { passive: true }
+          );
+
+          canvas.addEventListener(
+            'touchend',
+            () => {
+              swipeHandled = false;
+            },
+            { passive: true }
+          );
+        }
+
+        onResize() {
+          const w = window.innerWidth;
+          const h = window.innerHeight;
+          const aspect = w / Math.max(h, 1);
+
+          // Widen FOV slightly on narrow portrait phones so all 3 lanes & walls fit comfortably
+          this.baseFov = aspect < 0.72 ? 72 : aspect < 1.0 ? 66 : 58;
+          this.camera.fov = this.baseFov;
+          this.camera.aspect = aspect;
+          this.camera.updateProjectionMatrix();
+          this.renderer.setSize(w, h);
+        }
+
+        /* ===================================================================
+           GAME STATE MANAGEMENT
+           =================================================================== */
+        startGame() {
+          // Clear previous entities
+          this.clearEntities();
+
+          // Reset player & metrics
+          this.state = 'PLAYING';
+          this.speed = BASE_SPEED;
+          this.distance = 0;
+          this.bonesCollected = 0;
+          this.laneIndex = 1;
+          this.playerX = 0;
+          this.playerY = 0;
+          this.velocityY = 0;
+          this.isJumping = false;
+          this.isSliding = false;
+          this.slideTimer = 0;
+          this.invulnTimer = 0;
+          this.crashTimer = 0;
+          this.magnetTimer = 0;
+          this.shieldTimer = 0;
+          this.nextSpawnDist = 24;
+          this.rowsSpawned = 0;
+          this.challengeBeaten = false;
+
+          // Show friend's challenge target pill in HUD if active
+          if (this.challengeTarget > 0) {
+            this.ui.hudChallenge.style.display = 'inline-flex';
+            this.ui.hudChallenge.classList.remove('beaten');
+            this.ui.hudChallengeLabel.textContent = 'Beat';
+            this.ui.hudChallengeVal.textContent = this.challengeTarget.toLocaleString();
+          } else {
+            this.ui.hudChallenge.style.display = 'none';
+          }
+
+          // Reset corgi orientation
+          this.corgi.root.position.set(0, 0, 0);
+          this.corgi.root.rotation.set(0, 0, 0);
+          this.corgi.bodyPivot.rotation.set(0, 0, 0);
+          this.corgi.shieldMesh.visible = false;
+          this.corgi.magnetRing.visible = false;
+
+          // Update UI overlays
+          this.ui.screenStart.classList.add('hidden');
+          this.ui.screenPause.classList.add('hidden');
+          this.ui.screenGameOver.classList.add('hidden');
+          this.ui.startMuteWrap.style.display = 'none';
+          this.ui.hud.classList.add('visible');
+          this.updateHUD();
+          this.clock.getDelta();
+        }
+
+        togglePause() {
+          if (this.state === 'PLAYING') {
+            this.state = 'PAUSED';
+            this.ui.screenPause.classList.remove('hidden');
+          } else if (this.state === 'PAUSED') {
+            this.state = 'PLAYING';
+            this.ui.screenPause.classList.add('hidden');
+            this.clock.getDelta();
+          }
+        }
+
+        triggerGameOver() {
+          this.state = 'GAMEOVER';
+          this.crashTimer = 0.01;
+          this.sfx.playCrash();
+          this.addCameraShake(0.45, 0.55);
+          this.spawnBurst(this.playerX, this.playerY + 0.8, 0, 0xffd147, 18);
+
+          const finalScore = this.getTotalScore();
+          const isNewBest = finalScore > this.bestScore;
+          if (isNewBest) {
+            this.bestScore = finalScore;
+            this.saveBestScore(this.bestScore);
+          }
+
+          this.ui.hud.classList.remove('visible');
+          this.ui.goScore.textContent = finalScore.toLocaleString();
+          this.ui.goBones.textContent = this.bonesCollected.toLocaleString();
+          this.ui.goBest.textContent = this.bestScore.toLocaleString();
+          this.ui.startBestScore.textContent = this.bestScore.toLocaleString();
+          this.ui.newBestBadge.classList.toggle('hidden', !isNewBest);
+
+          setTimeout(() => {
+            if (this.state === 'GAMEOVER') {
+              this.ui.screenGameOver.classList.remove('hidden');
+            }
+          }, 520);
+        }
+
+        getTotalScore() {
+          return Math.floor(this.distance * 2) + this.bonesCollected * 15;
+        }
+
+        clearEntities() {
+          this.obstacles.forEach((o) => this.scene.remove(o.mesh));
+          this.bones.forEach((b) => this.scene.remove(b.mesh));
+          this.powerups.forEach((p) => this.scene.remove(p.mesh));
+          this.obstacles = [];
+          this.bones = [];
+          this.powerups = [];
+        }
+
+        /* ===================================================================
+           PLAYER ACTIONS (SNAPPY LANE SWITCH, JUMP, CORGI SPLOOT)
+           =================================================================== */
+        moveLane(dir) {
+          const next = Math.max(0, Math.min(2, this.laneIndex + dir));
+          if (next !== this.laneIndex) {
+            this.laneIndex = next;
+            this.sfx.playWhoosh(false);
+          }
+        }
+
+        jump() {
+          if (!this.isJumping) {
+            this.isJumping = true;
+            this.isSliding = false;
+            this.slideTimer = 0;
+            this.velocityY = JUMP_VELOCITY;
+            this.sfx.playJump();
+            this.spawnBurst(this.playerX, 0.15, 0.2, 0xe8dcc2, 6);
+          }
+        }
+
+        slide() {
+          if (this.isJumping) {
+            // Fast-fall straight into a sploot!
+            this.velocityY = Math.min(this.velocityY, FAST_FALL_VELOCITY);
+            this.isSliding = true;
+            this.slideTimer = SLIDE_DURATION;
+            this.sfx.playWhoosh(true);
+          } else {
+            this.isSliding = true;
+            this.slideTimer = SLIDE_DURATION;
+            this.sfx.playWhoosh(true);
+            this.spawnBurst(this.playerX, 0.15, 0.4, 0xd8c6a0, 7);
+          }
+        }
+
+        showToast(text, color = '#ffe57f') {
+          this.ui.toast.textContent = text;
+          this.ui.toast.style.color = color;
+          this.ui.toast.classList.add('show');
+          if (this.toastTimeout) clearTimeout(this.toastTimeout);
+          this.toastTimeout = setTimeout(() => {
+            this.ui.toast.classList.remove('show');
+          }, 1100);
+        }
+
+        addCameraShake(duration, magnitude) {
+          this.shakeTime = Math.max(this.shakeTime, duration);
+          this.shakeMagnitude = Math.max(this.shakeMagnitude, magnitude);
+        }
+
+        /* ===================================================================
+           SOLVABLE OBSTACLE, GOLDEN BONE, & POWER-UP SPAWNER
+           =================================================================== */
+        spawnRow(spawnZ) {
+          this.rowsSpawned++;
+          const patternRoll = Math.random();
+
+          // Choose 1 or 2 obstacles, ALWAYS guaranteeing at least 1 solvable path!
+          const laneOrder = [0, 1, 2].sort(() => Math.random() - 0.5);
+          let obstacleCount = 1;
+          if (this.rowsSpawned > 3 && patternRoll > 0.42) obstacleCount = 2;
+          if (this.rowsSpawned > 8 && patternRoll > 0.82) obstacleCount = 3;
+
+          let tallCount = 0;
+          const usedLanes = new Set();
+
+          for (let i = 0; i < obstacleCount; i++) {
+            const lane = laneOrder[i];
+            let type;
+
+            // Never block all 3 lanes with tall totems
+            if (tallCount >= 2 || (obstacleCount === 3 && i === 2 && tallCount >= 1)) {
+              type = Math.random() < 0.5 ? 'low' : 'high';
+            } else {
+              const r = Math.random();
+              type = r < 0.36 ? 'tall' : r < 0.68 ? 'low' : 'high';
+            }
+
+            if (type === 'tall') tallCount++;
+            usedLanes.add(lane);
+
+            const mesh = createObstacleMesh(type, this.mats);
+            mesh.position.set(LANES[lane], 0, spawnZ);
+            this.scene.add(mesh);
+
+            this.obstacles.push({
+              mesh,
+              type,
+              lane,
+              z: spawnZ,
+              hit: false
+            });
+
+            // Place rewarding bone arc over a 'low' hurdle!
+            if (type === 'low' && Math.random() < 0.65) {
+              for (let k = -2; k <= 2; k++) {
+                const arcZ = spawnZ + k * 2.1;
+                const arcY = 0.85 + Math.cos((k / 2.2) * (Math.PI / 2)) * 1.65;
+                this.addBone(LANES[lane], arcY, arcZ);
+              }
+            }
+          }
+
+          // Place line of golden bones in an open lane
+          const openLanes = [0, 1, 2].filter((l) => !usedLanes.has(l));
+          if (openLanes.length > 0 && Math.random() < 0.78) {
+            const boneLane = openLanes[Math.floor(Math.random() * openLanes.length)];
+            const count = 3 + Math.floor(Math.random() * 3);
+            for (let b = 0; b < count; b++) {
+              this.addBone(LANES[boneLane], 0.85, spawnZ - 4.5 + b * 2.3);
+            }
+          }
+
+          // Occasional Power-Up (Magnet or Shield) every ~11 rows
+          if (this.rowsSpawned % 10 === 6 && openLanes.length > 0) {
+            const pLane = openLanes[Math.floor(Math.random() * openLanes.length)];
+            const pType = Math.random() < 0.5 ? 'magnet' : 'shield';
+            const pMesh = createPowerupMesh(pType, this.mats);
+            pMesh.position.set(LANES[pLane], 1.15, spawnZ - 7.5);
+            this.scene.add(pMesh);
+            this.powerups.push({
+              mesh: pMesh,
+              type: pType,
+              collected: false
+            });
+          }
+        }
+
+        addBone(x, y, z) {
+          const mesh = createGoldenBoneMesh(this.mats);
+          mesh.position.set(x, y, z);
+          this.scene.add(mesh);
+          this.bones.push({
+            mesh,
+            baseY: y,
+            phase: z * 0.3,
+            collected: false
+          });
+        }
+
+        spawnBurst(x, y, z, colorHex, count = 10) {
+          let spawned = 0;
+          for (let i = 0; i < this.particles.length && spawned < count; i++) {
+            const p = this.particles[i];
+            if (!p.active) {
+              p.active = true;
+              p.life = 0;
+              p.maxLife = 0.32 + Math.random() * 0.25;
+              p.mesh.material.color.setHex(colorHex);
+              p.mesh.material.opacity = 1;
+              p.mesh.position.set(x, y, z);
+              p.mesh.scale.setScalar(0.7 + Math.random() * 0.8);
+              p.mesh.visible = true;
+
+              const ang = Math.random() * Math.PI * 2;
+              const spd = 2.2 + Math.random() * 4.5;
+              p.vx = Math.cos(ang) * spd;
+              p.vy = 2.5 + Math.random() * 4.8;
+              p.vz = Math.sin(ang) * spd;
+              spawned++;
+            }
+          }
+        }
+
+        /* ===================================================================
+           ANIMATION & PHYSICS UPDATE LOOP
+           =================================================================== */
+        updateCorgiAnimation(dt, elapsed) {
+          const c = this.corgi;
+
+          if (this.state === 'MENU') {
+            // Cute idle breathing, tail wagging, & head bob
+            c.root.position.set(0, 0, 0);
+            c.bodyPivot.position.y = Math.sin(elapsed * 3.5) * 0.04;
+            c.bodyPivot.rotation.set(0, 0, 0);
+            c.bodyPivot.scale.set(1, 1, 1);
+            c.tailPivot.rotation.z = Math.sin(elapsed * 14) * 0.45;
+            c.headGroup.rotation.z = Math.sin(elapsed * 1.8) * 0.08;
+            c.headGroup.rotation.x = Math.sin(elapsed * 2.4) * 0.04;
+            c.ears[0].rotation.x = Math.sin(elapsed * 3.5) * 0.08;
+            c.ears[1].rotation.x = Math.sin(elapsed * 3.5 + 0.4) * 0.08;
+            c.legs.fl.rotation.x = 0;
+            c.legs.fr.rotation.x = 0;
+            c.legs.bl.rotation.x = 0;
+            c.legs.br.rotation.x = 0;
+            c.groundShadow.position.set(0, 0.03, 0);
+            c.groundShadow.scale.setScalar(1);
+            return;
+          }
+
+          if (this.state === 'GAMEOVER') {
+            // Cute tumble/dizzy reaction
+            this.crashTimer += dt;
+            const tilt = Math.min(this.crashTimer * 3.8, 1.0);
+            c.bodyPivot.rotation.z = tilt * 0.65;
+            c.bodyPivot.rotation.x = -tilt * 0.35;
+            c.headGroup.rotation.z = Math.sin(elapsed * 16) * 0.22;
+            c.tailPivot.rotation.z = 0;
+            return;
+          }
+
+          // Smooth lane X interpolation & banking tilt
+          const targetX = LANES[this.laneIndex];
+          const dx = targetX - this.playerX;
+          this.playerX += dx * Math.min(1, dt * 15);
+          c.root.position.x = this.playerX;
+          c.root.position.y = this.playerY;
+
+          // Bank/lean smoothly into lane switches
+          const targetRoll = -dx * 0.14;
+          const targetYaw = -dx * 0.12;
+          c.root.rotation.z += (targetRoll - c.root.rotation.z) * Math.min(1, dt * 14);
+          c.root.rotation.y += (targetYaw - c.root.rotation.y) * Math.min(1, dt * 14);
+
+          // Ground shadow tracks corgi X and shrinks subtly as corgi jumps higher
+          c.groundShadow.position.set(this.playerX, 0.03, 0);
+          const shadowScale = Math.max(0.45, 1 - this.playerY * 0.14);
+          c.groundShadow.scale.setScalar(shadowScale);
+
+          // Invulnerability blink after shield break
+          if (this.invulnTimer > 0) {
+            c.bodyPivot.visible = Math.floor(elapsed * 22) % 2 === 0;
+          } else {
+            c.bodyPivot.visible = true;
+          }
+
+          // Wag tail joyfully while running
+          c.tailPivot.rotation.z = Math.sin(elapsed * 20) * 0.5;
+
+          if (this.isSliding && !this.isJumping) {
+            // === CORGI SPLOOT POSE! ===
+            c.bodyPivot.position.y += (-0.28 - c.bodyPivot.position.y) * Math.min(1, dt * 18);
+            c.bodyPivot.scale.y += (0.64 - c.bodyPivot.scale.y) * Math.min(1, dt * 18);
+            c.bodyPivot.scale.z += (1.18 - c.bodyPivot.scale.z) * Math.min(1, dt * 18);
+            c.bodyPivot.rotation.x += (0.04 - c.bodyPivot.rotation.x) * Math.min(1, dt * 15);
+
+            // Front paws stretched forward, back paws stretched straight back!
+            c.legs.fl.rotation.x = 1.35;
+            c.legs.fr.rotation.x = 1.35;
+            c.legs.bl.rotation.x = -1.35;
+            c.legs.br.rotation.x = -1.35;
+
+            // Head tucked low, ears streamlined back
+            c.headGroup.rotation.x = -0.22;
+            c.ears[0].rotation.x = 0.65;
+            c.ears[1].rotation.x = 0.65;
+          } else if (this.isJumping) {
+            // === ENERGETIC LEAP POSE ===
+            c.bodyPivot.position.y += (0 - c.bodyPivot.position.y) * Math.min(1, dt * 16);
+            c.bodyPivot.scale.y += (1 - c.bodyPivot.scale.y) * Math.min(1, dt * 16);
+            c.bodyPivot.scale.z += (1 - c.bodyPivot.scale.z) * Math.min(1, dt * 16);
+
+            // Pitch nose up on ascent, nose down on descent
+            const pitch = THREE.MathUtils.clamp(this.velocityY * 0.028, -0.35, 0.35);
+            c.bodyPivot.rotation.x = pitch;
+
+            c.legs.fl.rotation.x = 0.85;
+            c.legs.fr.rotation.x = 0.75;
+            c.legs.bl.rotation.x = -0.85;
+            c.legs.br.rotation.x = -0.75;
+
+            // Ears pinned back in the wind
+            c.headGroup.rotation.x = -pitch * 0.4;
+            c.ears[0].rotation.x = 0.55;
+            c.ears[1].rotation.x = 0.55;
+          } else {
+            // === RAPID STUBBY CORGI GALLOP ===
+            c.bodyPivot.scale.y += (1 - c.bodyPivot.scale.y) * Math.min(1, dt * 16);
+            c.bodyPivot.scale.z += (1 - c.bodyPivot.scale.z) * Math.min(1, dt * 16);
+
+            this.corgi.runCycle += dt * (this.speed * 0.82);
+            const t = this.corgi.runCycle;
+
+            // Energetic gallop leg cycling
+            c.legs.fl.rotation.x = Math.sin(t) * 0.85;
+            c.legs.fr.rotation.x = Math.sin(t + 0.55) * 0.85;
+            c.legs.bl.rotation.x = Math.sin(t + Math.PI) * 0.85;
+            c.legs.br.rotation.x = Math.sin(t + Math.PI + 0.55) * 0.85;
+
+            // Bouncy body & ears
+            c.bodyPivot.position.y = Math.abs(Math.sin(t)) * 0.13;
+            c.bodyPivot.rotation.x = Math.cos(t) * 0.08;
+            c.headGroup.rotation.x = -Math.cos(t) * 0.06;
+            c.headGroup.rotation.z = Math.sin(t * 0.5) * 0.04;
+
+            const earBounce = 0.14 + Math.abs(Math.sin(t)) * 0.24;
+            c.ears[0].rotation.x = earBounce;
+            c.ears[1].rotation.x = earBounce;
+          }
+
+          // Active Power-Up Visual Auras
+          c.shieldMesh.visible = this.shieldTimer > 0;
+          if (c.shieldMesh.visible) {
+            c.shieldMesh.rotation.y += dt * 1.8;
+            c.shieldMesh.material.opacity = 0.24 + Math.sin(elapsed * 8) * 0.08;
+          }
+
+          c.magnetRing.visible = this.magnetTimer > 0;
+          if (c.magnetRing.visible) {
+            const pulse = 0.92 + Math.sin(elapsed * 10) * 0.14;
+            c.magnetRing.scale.set(pulse, pulse, 1);
+          }
+        }
+
+        updatePlaying(dt, elapsed) {
+          // Progressive speed scaling
+          this.speed = Math.min(MAX_SPEED, this.speed + SPEED_ACCEL * dt);
+          const dz = this.speed * dt;
+          this.distance += dz;
+
+          // Subtle FOV warp as speed climbs
+          const speedRatio = (this.speed - BASE_SPEED) / (MAX_SPEED - BASE_SPEED);
+          const targetFov = this.baseFov + speedRatio * 9;
+          if (Math.abs(this.camera.fov - targetFov) > 0.05) {
+            this.camera.fov += (targetFov - this.camera.fov) * dt * 4;
+            this.camera.updateProjectionMatrix();
+          }
+
+          // Jump physics
+          if (this.isJumping) {
+            this.playerY += this.velocityY * dt;
+            this.velocityY += GRAVITY * dt;
+            if (this.playerY <= 0) {
+              this.playerY = 0;
+              this.velocityY = 0;
+              this.isJumping = false;
+              if (this.isSliding) {
+                this.spawnBurst(this.playerX, 0.15, 0.3, 0xd8c6a0, 8);
+              }
+            }
+          }
+
+          // Slide timer
+          if (this.isSliding && !this.isJumping) {
+            this.slideTimer -= dt;
+            if (Math.random() < 0.35) {
+              this.spawnBurst(this.playerX + (Math.random() - 0.5) * 0.5, 0.1, 0.65, 0xd8c6a0, 1);
+            }
+            if (this.slideTimer <= 0) {
+              this.isSliding = false;
+            }
+          }
+
+          // Timers
+          if (this.invulnTimer > 0) this.invulnTimer = Math.max(0, this.invulnTimer - dt);
+          if (this.magnetTimer > 0) this.magnetTimer = Math.max(0, this.magnetTimer - dt);
+          if (this.shieldTimer > 0) this.shieldTimer = Math.max(0, this.shieldTimer - dt);
+
+          // Scroll & recycle temple segments
+          let minZ = Infinity;
+          for (let i = 0; i < this.segments.length; i++) {
+            const seg = this.segments[i];
+            seg.position.z += dz;
+            if (seg.position.z < minZ) minZ = seg.position.z;
+          }
+          for (let i = 0; i < this.segments.length; i++) {
+            const seg = this.segments[i];
+            if (seg.position.z > 24) {
+              seg.position.z = minZ - SEGMENT_LENGTH;
+              minZ = seg.position.z;
+            }
+          }
+
+          // Spawn new obstacle/bone rows ahead of fog horizon
+          if (this.distance >= this.nextSpawnDist) {
+            this.spawnRow(-126);
+            // Dynamic spacing scales with speed so every pattern stays fair & readable
+            const gap = 16.5 + (this.speed - BASE_SPEED) * 0.42 + Math.random() * 4.5;
+            this.nextSpawnDist = this.distance + gap;
+          }
+
+          // Update & check Obstacles
+          const corgiHeight = this.isSliding && !this.isJumping ? 0.68 : 1.45;
+          for (let i = this.obstacles.length - 1; i >= 0; i--) {
+            const o = this.obstacles[i];
+            o.z += dz;
+            o.mesh.position.z = o.z;
+
+            // Collision window around player z = 0
+            if (!o.hit && this.invulnTimer <= 0 && o.z > -0.95 && o.z < 0.85) {
+              const xDist = Math.abs(this.playerX - LANES[o.lane]);
+              if (xDist < 0.92) {
+                let collided = false;
+                if (o.type === 'tall') {
+                  collided = true;
+                } else if (o.type === 'low') {
+                  // Must jump above ~0.82
+                  if (this.playerY < 0.82) collided = true;
+                } else if (o.type === 'high') {
+                  // Must sploot under clearance (~1.12)
+                  if (this.playerY + corgiHeight > 1.12) collided = true;
+                }
+
+                if (collided) {
+                  o.hit = true;
+                  if (this.shieldTimer > 0) {
+                    // Shield absorbs the hit!
+                    this.shieldTimer = 0;
+                    this.invulnTimer = 1.3;
+                    this.sfx.playShieldBreak();
+                    this.addCameraShake(0.32, 0.35);
+                    this.spawnBurst(this.playerX, this.playerY + 0.9, 0, 0x38e8ff, 22);
+                    this.showToast('SHIELD SAVED!', '#6ff7ff');
+                  } else {
+                    this.triggerGameOver();
+                    return;
+                  }
+                }
+              }
+            }
+
+            if (o.z > 14) {
+              this.scene.remove(o.mesh);
+              this.obstacles.splice(i, 1);
+            }
+          }
+
+          // Update & collect Golden Bones
+          for (let i = this.bones.length - 1; i >= 0; i--) {
+            const b = this.bones[i];
+            b.mesh.position.z += dz;
+            b.mesh.rotation.y += dt * 3.4;
+
+            if (!b.collected) {
+              // Magnet attraction across all lanes
+              if (this.magnetTimer > 0 && b.mesh.position.z > -16 && b.mesh.position.z < 3) {
+                b.mesh.position.x += (this.playerX - b.mesh.position.x) * Math.min(1, dt * 12);
+                b.mesh.position.y += (this.playerY + 0.85 - b.mesh.position.y) * Math.min(1, dt * 12);
+                b.mesh.position.z += (0 - b.mesh.position.z) * Math.min(1, dt * 7);
+              } else {
+                b.mesh.position.y = b.baseY + Math.sin(elapsed * 4.5 + b.phase) * 0.14;
+              }
+
+              // Check pickup distance
+              const dxB = b.mesh.position.x - this.playerX;
+              const dyB = b.mesh.position.y - (this.playerY + 0.75);
+              const dzB = b.mesh.position.z;
+              if (dxB * dxB + dyB * dyB + dzB * dzB < 1.45) {
+                b.collected = true;
+                this.bonesCollected++;
+                this.sfx.playBone();
+                this.spawnBurst(b.mesh.position.x, b.mesh.position.y, b.mesh.position.z, 0xffd147, 8);
+                this.scene.remove(b.mesh);
+                this.bones.splice(i, 1);
+                continue;
+              }
+            }
+
+            if (b.mesh.position.z > 12) {
+              this.scene.remove(b.mesh);
+              this.bones.splice(i, 1);
+            }
+          }
+
+          // Update & collect Power-Ups
+          for (let i = this.powerups.length - 1; i >= 0; i--) {
+            const p = this.powerups[i];
+            p.mesh.position.z += dz;
+            p.mesh.rotation.y += dt * 2.6;
+            p.mesh.position.y = 1.2 + Math.sin(elapsed * 4) * 0.18;
+
+            if (!p.collected) {
+              const dxP = p.mesh.position.x - this.playerX;
+              const dyP = p.mesh.position.y - (this.playerY + 0.8);
+              const dzP = p.mesh.position.z;
+              if (dxP * dxP + dyP * dyP + dzP * dzP < 1.9) {
+                p.collected = true;
+                this.sfx.playPowerup();
+                if (p.type === 'magnet') {
+                  this.magnetTimer = MAGNET_DURATION;
+                  this.spawnBurst(p.mesh.position.x, p.mesh.position.y, 0, 0xff4fd8, 16);
+                  this.showToast('BONE MAGNET!', '#ff99e8');
+                } else {
+                  this.shieldTimer = SHIELD_DURATION;
+                  this.spawnBurst(p.mesh.position.x, p.mesh.position.y, 0, 0x38e8ff, 16);
+                  this.showToast('TEMPLE SHIELD!', '#6ff7ff');
+                }
+                this.scene.remove(p.mesh);
+                this.powerups.splice(i, 1);
+                continue;
+              }
+            }
+
+            if (p.mesh.position.z > 12) {
+              this.scene.remove(p.mesh);
+              this.powerups.splice(i, 1);
+            }
+          }
+
+          this.updateHUD();
+
+          // Celebrate beating a friend's shared challenge score!
+          if (this.challengeTarget > 0 && !this.challengeBeaten && this.getTotalScore() > this.challengeTarget) {
+            this.challengeBeaten = true;
+            this.sfx.playPowerup();
+            this.spawnBurst(this.playerX, this.playerY + 1.0, 0, 0x6effb0, 22);
+            this.showToast('CHALLENGE BEATEN!', '#6effb0');
+            this.ui.hudChallenge.classList.add('beaten');
+            this.ui.hudChallengeLabel.textContent = 'Beaten!';
+          }
+        }
+
+        updateParticles(dt) {
+          for (let i = 0; i < this.particles.length; i++) {
+            const p = this.particles[i];
+            if (!p.active) continue;
+            p.life += dt;
+            if (p.life >= p.maxLife) {
+              p.active = false;
+              p.mesh.visible = false;
+              continue;
+            }
+            p.vy -= 14 * dt;
+            p.mesh.position.x += p.vx * dt;
+            p.mesh.position.y += p.vy * dt;
+            p.mesh.position.z += p.vz * dt;
+            p.mesh.rotation.x += 6 * dt;
+            p.mesh.rotation.y += 6 * dt;
+            const ratio = 1 - p.life / p.maxLife;
+            p.mesh.material.opacity = ratio;
+            p.mesh.scale.setScalar(ratio * 0.9);
+          }
+        }
+
+        updateFlames(elapsed) {
+          for (let i = 0; i < this.flames.length; i++) {
+            const f = this.flames[i];
+            const s = 0.88 + Math.sin(elapsed * 14 + f.userData.phase) * 0.18;
+            f.scale.set(1, s, 1);
+          }
+        }
+
+        updateCamera(dt, elapsed) {
+          if (this.state === 'MENU') {
+            // Showcase hero angle framing our adorable corgi on the sunlit temple bridge
+            const angle = Math.sin(elapsed * 0.55) * 0.38;
+            this.camera.position.x = Math.sin(angle) * 4.2;
+            this.camera.position.y = 2.65 + Math.sin(elapsed * 0.9) * 0.12;
+            this.camera.position.z = -3.8;
+            this.camera.lookAt(0, 0.95, 0.2);
+            return;
+          }
+
+          // Smooth chase camera behind corgi
+          const targetCamX = this.playerX * 0.55;
+          const targetCamY = 4.25 + this.playerY * 0.35;
+          const targetCamZ = 7.4;
+
+          this.camera.position.x += (targetCamX - this.camera.position.x) * Math.min(1, dt * 8);
+          this.camera.position.y += (targetCamY - this.camera.position.y) * Math.min(1, dt * 8);
+          this.camera.position.z += (targetCamZ - this.camera.position.z) * Math.min(1, dt * 8);
+
+          // Apply screen shake if active
+          let shakeX = 0;
+          let shakeY = 0;
+          if (this.shakeTime > 0) {
+            this.shakeTime = Math.max(0, this.shakeTime - dt);
+            const intensity = this.shakeMagnitude * (this.shakeTime * 2.2);
+            shakeX = (Math.random() - 0.5) * intensity;
+            shakeY = (Math.random() - 0.5) * intensity;
+          }
+
+          this.camera.position.x += shakeX;
+          this.camera.position.y += shakeY;
+          this.camera.lookAt(this.playerX * 0.35, 1.35 + this.playerY * 0.2, -9.5);
+        }
+
+        updateHUD() {
+          this.ui.hudScore.textContent = this.getTotalScore().toLocaleString();
+          this.ui.hudBones.textContent = this.bonesCollected.toLocaleString();
+
+          // Update Power-Up timer bars
+          let html = '';
+          if (this.magnetTimer > 0) {
+            const pct = Math.max(0, (this.magnetTimer / MAGNET_DURATION) * 100);
+            html += `<div class="powerup-bar magnet">
+              <span class="powerup-icon">&#x1F9F2;</span>
+              <div class="powerup-track"><div class="powerup-fill" style="width:${pct.toFixed(1)}%"></div></div>
+            </div>`;
+          }
+          if (this.shieldTimer > 0) {
+            const pct = Math.max(0, (this.shieldTimer / SHIELD_DURATION) * 100);
+            html += `<div class="powerup-bar shield">
+              <span class="powerup-icon">&#x1F6E1;&#xFE0F;</span>
+              <div class="powerup-track"><div class="powerup-fill" style="width:${pct.toFixed(1)}%"></div></div>
+            </div>`;
+          }
+          if (this.ui.powerupContainer.innerHTML !== html) {
+            this.ui.powerupContainer.innerHTML = html;
+          }
+        }
+
+        animate() {
+          requestAnimationFrame(this.animate);
+
+          const rawDt = this.clock.getDelta();
+          const dt = Math.min(rawDt, 0.05); // Clamp dt for tab-switch stability
+          const elapsed = this.clock.elapsedTime;
+
+          if (this.state === 'PLAYING') {
+            this.updatePlaying(dt, elapsed);
+          }
+
+          if (this.state !== 'PAUSED') {
+            this.updateCorgiAnimation(dt, elapsed);
+            this.updateParticles(dt);
+            this.updateFlames(elapsed);
+            this.updateCamera(dt, elapsed);
+          }
+
+          this.renderer.render(this.scene, this.camera);
+        }
+      }
+
+      // Start the animation loop after window load
+      window.onload = function () {
+        try {
+          const game = new TempleCorgiGame();
+          game.animate();
+        } catch (err) {
+          console.error('Temple Corgi failed to initialize:', err);
+        }
+      };
+    })();
+  </script>
+</body>
+</html>
