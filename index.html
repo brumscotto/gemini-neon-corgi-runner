@@ -4,17 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Temple Corgi - 3D Endless Runner</title>
-  <!-- Social & Messaging Link Preview Metadata -->
+
+  <!-- Social & Messaging Link Preview Metadata (Open Graph & Twitter) -->
   <meta name="description" content="Dash, leap, and corgi sploot through an ancient sunlit jungle temple! Can you beat my high score?" />
   <meta name="theme-color" content="#1b2e24" />
   <meta property="og:title" content="Temple Corgi - 3D Endless Runner" />
   <meta property="og:description" content="Help an adorable 3D Corgi dash through an ancient jungle temple. Tap to play and beat my score!" />
   <meta property="og:type" content="website" />
-  <!-- Playful adventure typography -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Temple Corgi - 3D Endless Runner" />
+  <meta name="twitter:description" content="Dash, leap, and corgi sploot through an ancient sunlit jungle temple! Can you beat my high score?" />
+
+  <!-- Playful Adventure Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
-  <!-- Three.js r128 CDN -->
+
+  <!-- Primary Three.js r128 UMD CDN (with jsDelivr fallback handled in script) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <style>
@@ -24,8 +30,8 @@
       --amber: #ff8c2b;
       --corgi: #e88b3a;
       --jungle-dark: #14281d;
-      --stone-bg: rgba(24, 34, 28, 0.78);
-      --glass-border: rgba(255, 224, 150, 0.35);
+      --stone-bg: rgba(24, 34, 28, 0.8);
+      --glass-border: rgba(255, 224, 150, 0.38);
       --danger: #ff4d4d;
       --cyan: #38e8ff;
       --magenta: #ff4fd8;
@@ -41,12 +47,15 @@
     }
 
     html, body {
+      position: fixed;
+      inset: 0;
       width: 100%;
       height: 100%;
+      height: 100dvh;
       overflow: hidden;
-      background: #1b2e24;
+      background: linear-gradient(180deg, #2d5a46 0%, #1b2e24 100%);
       font-family: 'Nunito', system-ui, -apple-system, sans-serif;
-      touch-action: none; /* Prevent pull-to-refresh & scrolling on mobile */
+      touch-action: none;
       overscroll-behavior: none;
     }
 
@@ -55,7 +64,10 @@
       inset: 0;
       width: 100%;
       height: 100%;
+      height: 100dvh;
       overflow: hidden;
+      touch-action: none;
+      z-index: 1;
     }
 
     canvas {
@@ -63,6 +75,48 @@
       width: 100%;
       height: 100%;
       touch-action: none;
+    }
+
+    /* ================= FATAL ERROR FALLBACK ================= */
+    #fatal-error {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(14, 24, 18, 0.94);
+      color: #fff6e0;
+      text-align: center;
+    }
+
+    #fatal-error.visible {
+      display: flex;
+    }
+
+    .fatal-card {
+      max-width: 380px;
+      background: #1f3327;
+      border: 2px solid #ff8c2b;
+      border-radius: 20px;
+      padding: 22px 18px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+    }
+
+    .fatal-card h2 {
+      font-family: 'Fredoka', sans-serif;
+      color: var(--gold);
+      margin-bottom: 10px;
+      font-size: 1.5rem;
+    }
+
+    .fatal-card p {
+      font-size: 0.92rem;
+      line-height: 1.45;
+      color: #e8dec5;
+      margin-bottom: 14px;
+      word-break: break-word;
     }
 
     /* ================= HUD OVERLAY ================= */
@@ -76,11 +130,13 @@
       padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
       z-index: 10;
       opacity: 0;
-      transition: opacity 0.25s ease;
+      visibility: hidden;
+      transition: opacity 0.25s ease, visibility 0.25s ease;
     }
 
     #hud.visible {
       opacity: 1;
+      visibility: visible;
     }
 
     .hud-top {
@@ -190,7 +246,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      margin-top: 8px;
+      margin-bottom: 6px;
       width: min(260px, 78vw);
     }
 
@@ -251,10 +307,10 @@
       font-family: 'Fredoka', sans-serif;
       font-size: 1.45rem;
       color: #fff;
-      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.65);
       pointer-events: none;
       opacity: 0;
-      z-index: 15;
+      z-index: 40;
       transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
       white-space: nowrap;
     }
@@ -273,8 +329,10 @@
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      padding: max(22px, env(safe-area-inset-top)) 20px max(26px, env(safe-area-inset-bottom));
-      background: radial-gradient(circle at 50% 42%, rgba(20, 35, 25, 0.18) 0%, rgba(12, 22, 16, 0.68) 100%);
+      padding: max(22px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+      background: radial-gradient(circle at 50% 42%, rgba(20, 35, 25, 0.14) 0%, rgba(12, 22, 16, 0.68) 100%);
+      opacity: 1;
+      visibility: visible;
       transition: opacity 0.28s ease, visibility 0.28s ease;
     }
 
@@ -328,14 +386,14 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
     }
 
     .highscore-pill {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(20, 32, 24, 0.82);
+      background: rgba(20, 32, 24, 0.84);
       border: 2px solid rgba(255, 209, 71, 0.45);
       border-radius: 999px;
       padding: 7px 18px;
@@ -354,13 +412,13 @@
     .primary-btn {
       width: 100%;
       max-width: 280px;
-      padding: 16px 28px;
+      padding: 15px 28px;
       border-radius: 20px;
       border: 3px solid #fff3c4;
       background: linear-gradient(180deg, #ffbe3b 0%, #f07b16 100%);
       color: #fffdf7;
       font-family: 'Fredoka', sans-serif;
-      font-size: 1.65rem;
+      font-size: 1.6rem;
       letter-spacing: 0.05em;
       text-shadow: 0 2px 4px rgba(122, 46, 0, 0.65);
       box-shadow:
@@ -402,12 +460,12 @@
 
     .controls-card {
       width: 100%;
-      background: rgba(18, 29, 23, 0.78);
+      background: rgba(18, 29, 23, 0.8);
       border: 1.5px solid rgba(255, 224, 150, 0.28);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       border-radius: 18px;
-      padding: 12px 14px;
+      padding: 10px 12px;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
@@ -420,7 +478,7 @@
       flex-direction: column;
       align-items: center;
       gap: 4px;
-      font-size: 0.76rem;
+      font-size: 0.75rem;
       font-weight: 800;
     }
 
@@ -543,14 +601,14 @@
       background: linear-gradient(180deg, rgba(35, 50, 40, 0.96) 0%, rgba(20, 31, 24, 0.98) 100%);
       border: 3px solid rgba(255, 214, 102, 0.55);
       border-radius: 26px;
-      padding: 26px 22px 24px;
+      padding: 24px 20px 22px;
       text-align: center;
       color: #fff8e7;
       box-shadow: 0 22px 50px rgba(0, 0, 0, 0.55);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
       animation: popIn 0.26s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
@@ -639,19 +697,29 @@
     }
 
     @media (max-height: 620px) {
-      .game-title { font-size: 2.4rem; }
+      .game-title { font-size: 2.35rem; }
       .controls-card { padding: 8px 10px; }
-      .primary-btn { padding: 13px 22px; font-size: 1.4rem; }
+      .primary-btn { padding: 12px 22px; font-size: 1.38rem; }
     }
   </style>
 </head>
 <body>
+  <!-- 3D WebGL Mount Container -->
   <div id="game-container"></div>
 
-  <!-- Floating action/powerup feedback -->
+  <!-- Fatal Error Fallback UI (only shown if WebGL or JS fails fatally) -->
+  <div id="fatal-error" role="alert">
+    <div class="fatal-card">
+      <h2>Oops! Temple Glitch</h2>
+      <p id="fatal-error-msg">Something went wrong while loading Temple Corgi.</p>
+      <button class="primary-btn" onclick="window.location.reload()">RELOAD</button>
+    </div>
+  </div>
+
+  <!-- Floating Action / Power-Up Feedback Banner -->
   <div id="toast-banner"></div>
 
-  <!-- In-Game HUD -->
+  <!-- In-Game HUD (Hidden until Play is pressed) -->
   <div id="hud">
     <div class="hud-top">
       <div class="hud-stats">
@@ -684,7 +752,9 @@
 
     <!-- Active Power-Up Timers -->
     <div id="powerup-container"></div>
-  <!-- Start Screen Mute & Share Buttons -->
+  </div>
+
+  <!-- Start Screen Top-Right Share & Mute Controls -->
   <div class="start-mute-wrap" id="start-mute-wrap">
     <button class="icon-btn" id="btn-share-start" aria-label="Share Game">
       <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
@@ -695,7 +765,7 @@
     </button>
   </div>
 
-  <!-- Start Screen -->
+  <!-- Start Screen (Visible immediately by default in HTML/CSS) -->
   <div class="screen-overlay" id="screen-start">
     <div class="title-block">
       <div class="title-badge">Ancient Jungle Dash</div>
@@ -780,31 +850,40 @@
   <script>
     /**
      * =========================================================================
-     * TEMPLE CORGI - Mobile-Optimized 3D Endless Runner (Three.js r128)
+     * TEMPLE CORGI - Bulletproof Mobile-Optimized 3D Endless Runner
      * =========================================================================
-     * Architecture:
-     * 1. SoundFX       : Pure Web Audio API synthesized sound effects + mute state
-     * 2. CorgiBuilder  : Low-poly stylized 3D Corgi with procedural run/jump/sploot
-     * 3. WorldManager  : Recycled sunlit jungle temple segments, braziers, foliage
-     * 4. EntityManager : Always-solvable obstacles, golden bone arcs, & power-ups
-     * 5. ParticlePool  : Pooled 3D particle bursts (bone sparkles, sploot dust, crash)
-     * 6. GameEngine    : State machine, snappy swipe/key input, physics, HUD updates
      */
-
     (function () {
       'use strict';
 
       /* =====================================================================
+         0. FATAL ERROR FALLBACK HANDLER (Never show a silent blank screen)
+         ===================================================================== */
+      function showFatalError(msg) {
+        try {
+          var box = document.getElementById('fatal-error');
+          var text = document.getElementById('fatal-error-msg');
+          if (text) text.textContent = msg || 'Unable to initialize 3D graphics.';
+          if (box) box.classList.add('visible');
+        } catch (e) {}
+      }
+
+      window.onerror = function (message, source, lineno) {
+        showFatalError('Error: ' + message + (lineno ? ' (line ' + lineno + ')' : ''));
+        return false;
+      };
+
+      /* =====================================================================
          1. CONSTANTS & CONFIGURATION
          ===================================================================== */
-      const LANES = [-2.4, 0, 2.4]; // Left, Center, Right world X coordinates
+      const LANES = [-2.4, 0, 2.4];
       const TRACK_WIDTH = 7.6;
       const SEGMENT_LENGTH = 16;
       const NUM_SEGMENTS = 13;
 
       const BASE_SPEED = 20;
       const MAX_SPEED = 45;
-      const SPEED_ACCEL = 0.28; // units/sec^2
+      const SPEED_ACCEL = 0.28;
 
       const GRAVITY = -46;
       const JUMP_VELOCITY = 16.2;
@@ -817,7 +896,7 @@
       const STORAGE_KEY = 'temple_corgi_best_v1';
 
       /* =====================================================================
-         2. SYNTHESIZED WEB AUDIO ENGINE
+         2. SYNTHESIZED WEB AUDIO ENGINE (iOS-Safe Lazy Unlock)
          ===================================================================== */
       class SoundFX {
         constructor() {
@@ -827,6 +906,7 @@
           this.lastBoneTime = 0;
         }
 
+        // Must be called inside a user gesture (touchstart / click)
         unlock() {
           try {
             if (!this.ctx) {
@@ -834,10 +914,10 @@
               if (AudioCtx) this.ctx = new AudioCtx();
             }
             if (this.ctx && this.ctx.state === 'suspended') {
-              this.ctx.resume();
+              this.ctx.resume().catch(function () {});
             }
           } catch (e) {
-            // Gracefully ignore audio errors on restricted environments
+            // Silently ignore on restricted iOS/webview environments
           }
         }
 
@@ -850,7 +930,6 @@
           if (this.muted || !this.ctx) return;
           try {
             const now = this.ctx.currentTime;
-            // Cute playful yip / boing
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
             osc.type = 'triangle';
@@ -869,7 +948,7 @@
           } catch (e) {}
         }
 
-        playWhoosh(isSlide = false) {
+        playWhoosh(isSlide) {
           if (this.muted || !this.ctx) return;
           try {
             const now = this.ctx.currentTime;
@@ -912,7 +991,6 @@
             }
             this.lastBoneTime = now;
 
-            // Pentatonic bright chime notes
             const notes = [587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66, 1318.51, 1567.98];
             const freq = notes[this.boneCombo];
 
@@ -955,6 +1033,32 @@
           } catch (e) {}
         }
 
+        playFanfare() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const melody = [
+              { f: 523.25, t: 0.0, d: 0.12 },
+              { f: 659.25, t: 0.11, d: 0.12 },
+              { f: 783.99, t: 0.22, d: 0.14 },
+              { f: 1046.5, t: 0.36, d: 0.35 }
+            ];
+            melody.forEach((n) => {
+              const osc = this.ctx.createOscillator();
+              const gain = this.ctx.createGain();
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(n.f, now + n.t);
+              gain.gain.setValueAtTime(0.001, now + n.t);
+              gain.gain.linearRampToValueAtTime(0.17, now + n.t + 0.02);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + n.t + n.d);
+              osc.connect(gain);
+              gain.connect(this.ctx.destination);
+              osc.start(now + n.t);
+              osc.stop(now + n.t + n.d + 0.02);
+            });
+          } catch (e) {}
+        }
+
         playShieldBreak() {
           if (this.muted || !this.ctx) return;
           try {
@@ -979,7 +1083,6 @@
           if (this.muted || !this.ctx) return;
           try {
             const now = this.ctx.currentTime;
-            // Deep thud
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
             osc.type = 'sine';
@@ -994,7 +1097,6 @@
             osc.start(now);
             osc.stop(now + 0.35);
 
-            // Little sad cartoon yip
             const yip = this.ctx.createOscillator();
             const yipGain = this.ctx.createGain();
             yip.type = 'triangle';
@@ -1011,14 +1113,13 @@
       }
 
       /* =====================================================================
-         3. STYLIZED 3D CORGI CHARACTER BUILDER & ANIMATOR
+         3. STYLIZED 3D CORGI CHARACTER BUILDER
          ===================================================================== */
       function createCorgi() {
         const root = new THREE.Group();
         const bodyPivot = new THREE.Group();
         root.add(bodyPivot);
 
-        // Shared Materials
         const matGinger = new THREE.MeshStandardMaterial({ color: 0xe3883b, roughness: 0.72, metalness: 0.02 });
         const matGingerDark = new THREE.MeshStandardMaterial({ color: 0xc96f28, roughness: 0.78 });
         const matWhite = new THREE.MeshStandardMaterial({ color: 0xfffaf0, roughness: 0.7 });
@@ -1027,30 +1128,27 @@
         const matCollar = new THREE.MeshStandardMaterial({ color: 0xd93025, roughness: 0.45 });
         const matGold = new THREE.MeshStandardMaterial({ color: 0xffd23f, roughness: 0.25, metalness: 0.7 });
 
-        // --- Elongated Corgi Torso (facing -Z) ---
+        // Elongated Corgi Torso (facing -Z)
         const torsoGroup = new THREE.Group();
         torsoGroup.position.set(0, 0.72, 0);
         bodyPivot.add(torsoGroup);
 
-        // Main ginger back/torso
         const torsoMesh = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.62, 1.48), matGinger);
         torsoMesh.castShadow = true;
         torsoMesh.receiveShadow = true;
         torsoGroup.add(torsoMesh);
 
-        // White fluffy belly
         const bellyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.22, 1.38), matWhite);
         bellyMesh.position.set(0, -0.25, 0.02);
         torsoGroup.add(bellyMesh);
 
-        // Fluffy white chest puff (front)
         const chestMesh = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), matWhite);
         chestMesh.scale.set(0.95, 0.92, 0.75);
         chestMesh.position.set(0, -0.02, -0.68);
         chestMesh.castShadow = true;
         torsoGroup.add(chestMesh);
 
-        // Fluffy corgi butt/rump (back)
+        // Fluffy white corgi rump
         const buttLeft = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), matWhite);
         buttLeft.position.set(-0.18, -0.06, 0.72);
         torsoGroup.add(buttLeft);
@@ -1086,45 +1184,37 @@
         tag.position.set(0, -0.18, -0.94);
         torsoGroup.add(tag);
 
-        // --- Head Group ---
+        // Head Group
         const headGroup = new THREE.Group();
         headGroup.position.set(0, 0.44, -0.78);
         torsoGroup.add(headGroup);
 
-        // Main skull
         const skull = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.64, 0.68), matGinger);
         skull.castShadow = true;
         headGroup.add(skull);
 
-        // White facial blaze stripe
         const blaze = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.42, 0.06), matWhite);
         blaze.position.set(0, 0.04, -0.33);
         headGroup.add(blaze);
 
-        // Fluffy white cheeks
-        const cheekGeo = new THREE.BoxGeometry(0.82, 0.28, 0.46);
-        const cheeks = new THREE.Mesh(cheekGeo, matWhite);
+        const cheeks = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.28, 0.46), matWhite);
         cheeks.position.set(0, -0.16, -0.14);
         headGroup.add(cheeks);
 
-        // White Muzzle
         const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.26, 0.34), matWhite);
         muzzle.position.set(0, -0.14, -0.46);
         muzzle.castShadow = true;
         headGroup.add(muzzle);
 
-        // Cute Black Nose
         const nose = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.11, 0.1), matBlack);
         nose.position.set(0, -0.05, -0.63);
         headGroup.add(nose);
 
-        // Happy little pink tongue
         const tongue = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.12, 0.06), matPink);
         tongue.position.set(0, -0.27, -0.54);
         tongue.rotation.x = -0.35;
         headGroup.add(tongue);
 
-        // Shiny Black Eyes with White Sparkles
         const eyeGeo = new THREE.SphereGeometry(0.075, 8, 8);
         const sparkleGeo = new THREE.SphereGeometry(0.025, 6, 6);
         [-1, 1].forEach((side) => {
@@ -1137,7 +1227,7 @@
           headGroup.add(sparkle);
         });
 
-        // Big Pointy Corgi Ears (pivoted at base for bounce/pin-back)
+        // Bouncing Pointy Ears
         const ears = [];
         [-1, 1].forEach((side) => {
           const earPivot = new THREE.Group();
@@ -1161,7 +1251,7 @@
           ears.push(earPivot);
         });
 
-        // --- Four Stubby Corgi Legs with White Paws ---
+        // Stubby Corgi Legs with White Paws
         function makeLeg(x, z) {
           const pivot = new THREE.Group();
           pivot.position.set(x, 0.44, z);
@@ -1185,7 +1275,7 @@
         const legBL = makeLeg(-0.26, 0.48);
         const legBR = makeLeg(0.26, 0.48);
 
-        // --- Shield Aura Sphere (hidden unless Shield power-up active) ---
+        // Shield Aura Sphere
         const shieldMat = new THREE.MeshStandardMaterial({
           color: 0x38e8ff,
           emissive: 0x1cb8ff,
@@ -1200,7 +1290,7 @@
         shieldMesh.visible = false;
         root.add(shieldMesh);
 
-        // --- Magnet Ring Aura (subtle pulsing ring around corgi when active) ---
+        // Magnet Aura Ring
         const magnetRingMat = new THREE.MeshBasicMaterial({
           color: 0xff4fd8,
           transparent: true,
@@ -1213,7 +1303,7 @@
         magnetRing.visible = false;
         root.add(magnetRing);
 
-        // --- Blob Shadow directly underneath corgi (stays grounded when jumping!) ---
+        // Ground Blob Shadow
         const shadowMat = new THREE.MeshBasicMaterial({
           color: 0x0a140d,
           transparent: true,
@@ -1240,7 +1330,7 @@
       }
 
       /* =====================================================================
-         4. SHARED ASSETS & PROCEDURAL TEMPLE WORLD BUILDER
+         4. SHARED MATERIALS & TEMPLE WORLD BUILDER
          ===================================================================== */
       function createSharedMaterials() {
         return {
@@ -1278,18 +1368,15 @@
       function createTempleSegment(mats, flameList) {
         const seg = new THREE.Group();
 
-        // Main stone bridge deck
         const deck = new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH, 1.4, SEGMENT_LENGTH), mats.stonePath);
         deck.position.set(0, -0.7, 0);
         deck.receiveShadow = true;
         seg.add(deck);
 
-        // Under-bridge ancient stone support beam
         const underBeam = new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH - 1.2, 6.0, 2.2), mats.stoneDark);
         underBeam.position.set(0, -4.4, 0);
         seg.add(underBeam);
 
-        // Subtle stone slab lane dividers
         const dividerGeo = new THREE.BoxGeometry(0.14, 0.04, SEGMENT_LENGTH - 0.3);
         [-1.2, 1.2].forEach((x) => {
           const line = new THREE.Mesh(dividerGeo, mats.stoneDark);
@@ -1298,7 +1385,6 @@
           seg.add(line);
         });
 
-        // Decorative cross-slab cracks for speed sense
         const crossGeo = new THREE.BoxGeometry(TRACK_WIDTH - 0.5, 0.03, 0.14);
         [-4, 4].forEach((z) => {
           const cross = new THREE.Mesh(crossGeo, mats.stoneDark);
@@ -1307,7 +1393,6 @@
           seg.add(cross);
         });
 
-        // Flanking Ancient Stone Parapet Walls
         const wallGeo = new THREE.BoxGeometry(0.85, 1.1, SEGMENT_LENGTH);
         [-1, 1].forEach((side) => {
           const wx = side * (TRACK_WIDTH / 2 + 0.42);
@@ -1317,23 +1402,19 @@
           wall.receiveShadow = true;
           seg.add(wall);
 
-          // Moss patches on wall
           const moss = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.2, 2.8), mats.moss);
           moss.position.set(wx, 0.82, side * 3.2);
           seg.add(moss);
 
-          // Carved Temple Pillar at segment edge
           const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.3, 4.4, 1.3), mats.stoneDark);
           pillar.position.set(wx + side * 0.2, 1.8, -SEGMENT_LENGTH / 2 + 1.5);
           pillar.castShadow = true;
           seg.add(pillar);
 
-          // Pillar capital top
           const cap = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.45, 1.65), mats.stoneTrim);
           cap.position.set(wx + side * 0.2, 4.1, -SEGMENT_LENGTH / 2 + 1.5);
           seg.add(cap);
 
-          // Flickering Fire Brazier atop every pillar
           const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.28, 0.42, 7), mats.brazierBowl);
           bowl.position.set(wx + side * 0.2, 4.5, -SEGMENT_LENGTH / 2 + 1.5);
           seg.add(bowl);
@@ -1350,7 +1431,7 @@
           seg.add(flameGroup);
           flameList.push(flameGroup);
 
-          // Stylized Palm Tree & Jungle Foliage rising from outside the temple bridge
+          // Palm tree outside bridge
           const palmGroup = new THREE.Group();
           const pz = (Math.random() - 0.5) * 10;
           const px = side * (TRACK_WIDTH / 2 + 3.2 + Math.random() * 2.5);
@@ -1378,7 +1459,6 @@
           palmGroup.add(crown);
           seg.add(palmGroup);
 
-          // Low fern bush hugging the outer wall
           const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(1.15, 0), mats.foliageDark);
           bush.scale.set(1.2, 0.75, 1.3);
           bush.position.set(side * (TRACK_WIDTH / 2 + 1.5), 0.1, 3.5);
@@ -1395,7 +1475,6 @@
         const g = new THREE.Group();
 
         if (type === 'low') {
-          // Fallen mossy jungle log / low carved stone hurdle (Jump Over!)
           const log = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 2.05, 8), mats.log);
           log.rotation.z = Math.PI / 2;
           log.position.y = 0.46;
@@ -1403,12 +1482,10 @@
           log.receiveShadow = true;
           g.add(log);
 
-          // Moss cap for contrast & readability
           const moss = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.18, 0.55), mats.moss);
           moss.position.set(0, 0.88, 0);
           g.add(moss);
 
-          // Stone end-supports
           [-0.92, 0.92].forEach((x) => {
             const cap = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.85, 0.65), mats.stoneDark);
             cap.position.set(x, 0.42, 0);
@@ -1416,7 +1493,6 @@
             g.add(cap);
           });
         } else if (type === 'high') {
-          // Overhead temple stone beam / archway (Corgi Sploot / Slide Under!)
           [-1.05, 1.05].forEach((x) => {
             const post = new THREE.Mesh(new THREE.BoxGeometry(0.32, 3.0, 0.46), mats.stoneDark);
             post.position.set(x, 1.5, 0);
@@ -1424,14 +1500,12 @@
             g.add(post);
           });
 
-          // Heavy overhead carved stone lintel (bottom clearance at y = 1.12)
           const beam = new THREE.Mesh(new THREE.BoxGeometry(2.45, 1.15, 0.72), mats.stoneTrim);
           beam.position.set(0, 1.72, 0);
           beam.castShadow = true;
           beam.receiveShadow = true;
           g.add(beam);
 
-          // Turquoise carved temple stripe & hanging moss vines for clear visual cue
           const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.24, 0.76), mats.totemAccent);
           stripe.position.set(0, 1.72, 0);
           g.add(stripe);
@@ -1443,7 +1517,6 @@
             g.add(vine);
           });
         } else {
-          // Tall carved temple totem / mossy boulder (Switch Lanes!)
           const base = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 1.4), mats.stoneDark);
           base.position.y = 0.25;
           base.castShadow = true;
@@ -1454,7 +1527,6 @@
           body.castShadow = true;
           g.add(body);
 
-          // Carved glowing jade/turquoise eyes on totem face
           [-0.28, 0.28].forEach((ex) => {
             const eye = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.24, 0.14), mats.totemAccent);
             eye.position.set(ex, 1.95, 0.56);
@@ -1500,7 +1572,6 @@
         const g = new THREE.Group();
 
         if (type === 'magnet') {
-          // Stylized U-shaped magnet
           const arc = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.11, 8, 14, Math.PI), mats.magnetRed);
           arc.position.y = 0.12;
           g.add(arc);
@@ -1511,13 +1582,11 @@
             g.add(tip);
           });
         } else {
-          // Glowing cyan Temple Shield crystal
           const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.48, 0), mats.shieldGem);
           gem.scale.set(0.85, 1.15, 0.85);
           g.add(gem);
         }
 
-        // Halo ring around power-up
         const ringMat = new THREE.MeshBasicMaterial({
           color: type === 'magnet' ? 0xff4fd8 : 0x38e8ff,
           transparent: true,
@@ -1569,12 +1638,60 @@
           this.bestScore = this.loadBestScore();
           this.ui.startBestScore.textContent = this.bestScore.toLocaleString();
 
-          // Parse incoming friend challenge from URL (?beat=1250&bones=30)
+          // Player Physics State
+          this.laneIndex = 1;
+          this.playerX = 0;
+          this.playerY = 0;
+          this.velocityY = 0;
+          this.isJumping = false;
+          this.isSliding = false;
+          this.slideTimer = 0;
+          this.invulnTimer = 0;
+          this.crashTimer = 0;
+          this.magnetTimer = 0;
+          this.shieldTimer = 0;
+
+          // Camera & Spawner State
+          this.baseFov = 62;
+          this.shakeTime = 0;
+          this.shakeMagnitude = 0;
+          this.nextSpawnDist = 24;
+          this.rowsSpawned = 0;
+          this.toastTimeout = null;
+
+          // World Object Pools & Lists
+          this.segments = [];
+          this.flames = [];
+          this.obstacles = [];
+          this.bones = [];
+          this.powerups = [];
+          this.particles = [];
+          this.clock = new THREE.Clock();
+
+          // Parse incoming friend challenge (?beat=SCORE&bones=BONES)
           this.challengeTarget = this.parseChallengeParam();
           this.challengeBeaten = false;
           if (this.challengeTarget > 0) {
             this.ui.challengeBanner.classList.remove('hidden');
             this.ui.challengeBannerText.textContent = `Beat ${this.challengeTarget.toLocaleString()} Points!`;
+          }
+
+          // Initialize Three.js, 3D World, and Input Listeners
+          this.initThree();
+          this.initWorld();
+          this.initEvents();
+
+          // Bind animation loop
+          this.animate = this.animate.bind(this);
+        }
+
+        loadBestScore() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            const num = parseInt(raw || '0', 10);
+            return Number.isFinite(num) && num > 0 ? num : 0;
+          } catch (e) {
+            return 0;
           }
         }
 
@@ -1628,7 +1745,7 @@
           }
         }
 
-        async shareResult(fromStart = false) {
+        async shareResult(fromStart) {
           const score = fromStart ? this.bestScore : this.getTotalScore();
           const bones = fromStart ? 0 : this.bonesCollected;
           const shareUrl = this.buildShareUrl(score, bones);
@@ -1644,7 +1761,6 @@
 
           const fullCopyText = shareUrl ? `${text}\n${shareUrl}` : text;
 
-          // Use native mobile share sheet if available
           if (navigator.share) {
             try {
               const payload = { title: 'Temple Corgi - 3D Endless Runner', text };
@@ -1652,12 +1768,10 @@
               await navigator.share(payload);
               return;
             } catch (err) {
-              // Ignore if user dismissed the share sheet
               if (err && err.name === 'AbortError') return;
             }
           }
 
-          // Fallback: copy formatted challenge text + link to clipboard
           if (this.copyTextToClipboard(fullCopyText)) {
             this.showToast(shareUrl ? 'CHALLENGE LINK COPIED!' : 'SCORE COPIED!', '#6ff7ff');
           } else {
@@ -1681,7 +1795,7 @@
           ctx.fillStyle = bg;
           ctx.fillRect(0, 0, w, h);
 
-          // Warm sunlit radial glow behind Corgi emblem
+          // Warm radial glow
           const glow = ctx.createRadialGradient(w / 2, 430, 30, w / 2, 430, 360);
           glow.addColorStop(0, 'rgba(255, 209, 71, 0.34)');
           glow.addColorStop(1, 'rgba(255, 209, 71, 0)');
@@ -1693,13 +1807,11 @@
           ctx.lineWidth = 14;
           ctx.strokeRect(42, 42, w - 84, h - 84);
 
-          // Top Badge
           ctx.fillStyle = '#ffe394';
           ctx.font = '800 32px Nunito, sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText('ANCIENT JUNGLE DASH', w / 2, 130);
 
-          // Title
           ctx.fillStyle = '#fff6dc';
           ctx.font = '700 94px Fredoka, sans-serif';
           ctx.fillText('TEMPLE CORGI', w / 2, 232);
@@ -1708,7 +1820,6 @@
           const cx = w / 2;
           const cy = 445;
 
-          // Ears
           ctx.fillStyle = '#c96f28';
           ctx.beginPath();
           ctx.moveTo(cx - 125, cy - 30);
@@ -1724,7 +1835,6 @@
           ctx.closePath();
           ctx.fill();
 
-          // Inner pink ears
           ctx.fillStyle = '#f4a4a0';
           ctx.beginPath();
           ctx.moveTo(cx - 110, cy - 45);
@@ -1740,34 +1850,29 @@
           ctx.closePath();
           ctx.fill();
 
-          // Head circle
           ctx.fillStyle = '#e3883b';
           ctx.beginPath();
           ctx.arc(cx, cy, 135, 0, Math.PI * 2);
           ctx.fill();
 
-          // White cheeks & muzzle
           ctx.fillStyle = '#fffaf0';
           ctx.beginPath();
           ctx.ellipse(cx, cy + 48, 128, 86, 0, 0, Math.PI * 2);
           ctx.fill();
           ctx.fillRect(cx - 22, cy - 110, 44, 115);
 
-          // Eyes
           ctx.fillStyle = '#1b1918';
           ctx.beginPath();
           ctx.arc(cx - 54, cy - 12, 16, 0, Math.PI * 2);
           ctx.arc(cx + 54, cy - 12, 16, 0, Math.PI * 2);
           ctx.fill();
 
-          // Eye sparkles
           ctx.fillStyle = '#ffffff';
           ctx.beginPath();
           ctx.arc(cx - 48, cy - 18, 5, 0, Math.PI * 2);
           ctx.arc(cx + 60, cy - 18, 5, 0, Math.PI * 2);
           ctx.fill();
 
-          // Nose & Happy Tongue
           ctx.fillStyle = '#1b1918';
           ctx.beginPath();
           ctx.ellipse(cx, cy + 32, 24, 16, 0, 0, Math.PI * 2);
@@ -1778,7 +1883,7 @@
           ctx.ellipse(cx, cy + 78, 22, 28, 0, 0, Math.PI);
           ctx.fill();
 
-          // Score Card Box
+          // Score Box
           const score = this.getTotalScore();
           ctx.fillStyle = 'rgba(12, 22, 16, 0.78)';
           ctx.strokeStyle = 'rgba(255, 209, 71, 0.5)';
@@ -1794,7 +1899,6 @@
           ctx.font = '700 132px Fredoka, sans-serif';
           ctx.fillText(score.toLocaleString(), w / 2, 868);
 
-          // Bones & Best row
           ctx.fillStyle = '#d7cca8';
           ctx.font = '800 28px Nunito, sans-serif';
           ctx.fillText('GOLDEN BONES', w / 2 - 200, 965);
@@ -1805,7 +1909,6 @@
           ctx.fillText(this.bonesCollected.toLocaleString(), w / 2 - 200, 1042);
           ctx.fillText(this.bestScore.toLocaleString(), w / 2 + 200, 1042);
 
-          // Call-to-action footer
           ctx.fillStyle = '#6ff7ff';
           ctx.font = '700 44px Fredoka, sans-serif';
           ctx.fillText('CAN YOU BEAT MY RUN?', w / 2, 1225);
@@ -1818,7 +1921,6 @@
             const cardCanvas = this.generateScoreCardCanvas();
             const dataUrl = cardCanvas.toDataURL('image/png');
 
-            // On supported mobile browsers, try sharing the image file directly
             if (navigator.canShare && typeof File !== 'undefined') {
               try {
                 const res = await fetch(dataUrl);
@@ -1837,7 +1939,6 @@
               }
             }
 
-            // Standard PNG download fallback
             const link = document.createElement('a');
             link.download = `temple-corgi-${this.getTotalScore()}.png`;
             link.href = dataUrl;
@@ -1852,25 +1953,29 @@
 
         initThree() {
           this.scene = new THREE.Scene();
-
-          // Warm golden sunlit jungle atmosphere
           this.scene.background = new THREE.Color(0x88c9b8);
           this.scene.fog = new THREE.Fog(0x9ed4ba, 42, 138);
 
-          // Camera (responsive FOV adjusted in onResize)
-          this.camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.2, 180);
+          const w = this.container.clientWidth || window.innerWidth || 390;
+          const h = this.container.clientHeight || window.innerHeight || 844;
+
+          this.camera = new THREE.PerspectiveCamera(62, w / Math.max(h, 1), 0.2, 180);
           this.camera.position.set(0, 4.3, 7.6);
           this.camera.lookAt(0, 1.4, -8);
 
-          // Renderer (capped DPR for crisp 60fps mobile performance)
-          this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+          try {
+            this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+          } catch (e) {
+            showFatalError('WebGL is disabled or unsupported in this browser.');
+            throw e;
+          }
+
           this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-          this.renderer.setSize(window.innerWidth, window.innerHeight);
+          this.renderer.setSize(w, h);
           this.renderer.shadowMap.enabled = true;
           this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
           this.container.appendChild(this.renderer.domElement);
 
-          // Lighting: Warm Sunlight + Jungle Bounce
           const hemiLight = new THREE.HemisphereLight(0xfff4d6, 0x265436, 0.88);
           this.scene.add(hemiLight);
 
@@ -1888,7 +1993,6 @@
           sunLight.shadow.bias = -0.001;
           this.scene.add(sunLight);
 
-          // Sun disc in the distant golden sky
           const sunDisc = new THREE.Mesh(
             new THREE.CircleGeometry(14, 24),
             new THREE.MeshBasicMaterial({ color: 0xfff2b2, fog: false })
@@ -1896,7 +2000,6 @@
           sunDisc.position.set(22, 34, -135);
           this.scene.add(sunDisc);
 
-          // Distant misty jungle canopy floor below the elevated temple bridge
           const abyssFloor = new THREE.Mesh(
             new THREE.PlaneGeometry(260, 260),
             new THREE.MeshStandardMaterial({ color: 0x1e4d33, roughness: 1.0 })
@@ -1911,12 +2014,10 @@
         initWorld() {
           this.mats = createSharedMaterials();
 
-          // Create Corgi
           this.corgi = createCorgi();
           this.scene.add(this.corgi.root);
           this.scene.add(this.corgi.groundShadow);
 
-          // Create Recycled Temple Track Segments
           for (let i = 0; i < NUM_SEGMENTS; i++) {
             const seg = createTempleSegment(this.mats, this.flames);
             seg.position.z = 16 - i * SEGMENT_LENGTH;
@@ -1924,7 +2025,6 @@
             this.segments.push(seg);
           }
 
-          // Pooled 3D Particles
           const pGeo = new THREE.BoxGeometry(0.18, 0.18, 0.18);
           for (let i = 0; i < 65; i++) {
             const mat = new THREE.MeshBasicMaterial({ color: 0xffd147, transparent: true, opacity: 1 });
@@ -1943,13 +2043,19 @@
           }
         }
 
-        /* ===================================================================
-           INPUT & UI EVENT BINDINGS
-           =================================================================== */
         initEvents() {
           window.addEventListener('resize', () => this.onResize());
+          window.addEventListener('orientationchange', () => setTimeout(() => this.onResize(), 120));
 
-          // Buttons
+          // Global first-tap audio unlock for iOS Safari/Chrome
+          const unlockOnce = () => {
+            this.sfx.unlock();
+            window.removeEventListener('touchstart', unlockOnce);
+            window.removeEventListener('click', unlockOnce);
+          };
+          window.addEventListener('touchstart', unlockOnce, { passive: true });
+          window.addEventListener('click', unlockOnce);
+
           document.getElementById('btn-play').addEventListener('click', () => {
             this.sfx.unlock();
             this.startGame();
@@ -1976,7 +2082,6 @@
           document.getElementById('btn-mute-hud').addEventListener('click', handleMute);
           document.getElementById('btn-mute-start').addEventListener('click', handleMute);
 
-          // Share & Score Card Buttons
           document.getElementById('btn-share-start').addEventListener('click', () => {
             this.sfx.unlock();
             this.shareResult(true);
@@ -1990,7 +2095,6 @@
             this.downloadScoreCard();
           });
 
-          // Keyboard controls (Desktop)
           window.addEventListener('keydown', (e) => {
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
               e.preventDefault();
@@ -2002,12 +2106,7 @@
               return;
             }
 
-            if (this.state === 'MENU' && (e.code === 'Space' || e.code === 'Enter')) {
-              this.startGame();
-              return;
-            }
-
-            if (this.state === 'GAMEOVER' && (e.code === 'Space' || e.code === 'Enter')) {
+            if ((this.state === 'MENU' || this.state === 'GAMEOVER') && (e.code === 'Space' || e.code === 'Enter')) {
               this.startGame();
               return;
             }
@@ -2020,12 +2119,11 @@
             else if (e.code === 'ArrowDown' || e.code === 'KeyS') this.slide();
           });
 
-          // Low-Latency Mobile Touch Swipe Controls
+          // Low-Latency Mobile Touch Swipe Detection
           let touchStartX = 0;
           let touchStartY = 0;
           let swipeHandled = false;
-          const SWIPE_THRESHOLD = 26; // Snappy threshold in px
-
+          const SWIPE_THRESHOLD = 26;
           const canvas = this.renderer.domElement;
 
           canvas.addEventListener(
@@ -2070,11 +2168,10 @@
         }
 
         onResize() {
-          const w = window.innerWidth;
-          const h = window.innerHeight;
+          const w = this.container.clientWidth || window.innerWidth || 390;
+          const h = this.container.clientHeight || window.innerHeight || 844;
           const aspect = w / Math.max(h, 1);
 
-          // Widen FOV slightly on narrow portrait phones so all 3 lanes & walls fit comfortably
           this.baseFov = aspect < 0.72 ? 72 : aspect < 1.0 ? 66 : 58;
           this.camera.fov = this.baseFov;
           this.camera.aspect = aspect;
@@ -2082,14 +2179,9 @@
           this.renderer.setSize(w, h);
         }
 
-        /* ===================================================================
-           GAME STATE MANAGEMENT
-           =================================================================== */
         startGame() {
-          // Clear previous entities
           this.clearEntities();
 
-          // Reset player & metrics
           this.state = 'PLAYING';
           this.speed = BASE_SPEED;
           this.distance = 0;
@@ -2109,7 +2201,6 @@
           this.rowsSpawned = 0;
           this.challengeBeaten = false;
 
-          // Show friend's challenge target pill in HUD if active
           if (this.challengeTarget > 0) {
             this.ui.hudChallenge.style.display = 'inline-flex';
             this.ui.hudChallenge.classList.remove('beaten');
@@ -2119,14 +2210,12 @@
             this.ui.hudChallenge.style.display = 'none';
           }
 
-          // Reset corgi orientation
           this.corgi.root.position.set(0, 0, 0);
           this.corgi.root.rotation.set(0, 0, 0);
           this.corgi.bodyPivot.rotation.set(0, 0, 0);
           this.corgi.shieldMesh.visible = false;
           this.corgi.magnetRing.visible = false;
 
-          // Update UI overlays
           this.ui.screenStart.classList.add('hidden');
           this.ui.screenPause.classList.add('hidden');
           this.ui.screenGameOver.classList.add('hidden');
@@ -2171,6 +2260,7 @@
           setTimeout(() => {
             if (this.state === 'GAMEOVER') {
               this.ui.screenGameOver.classList.remove('hidden');
+              if (isNewBest) this.sfx.playFanfare();
             }
           }, 520);
         }
@@ -2188,9 +2278,6 @@
           this.powerups = [];
         }
 
-        /* ===================================================================
-           PLAYER ACTIONS (SNAPPY LANE SWITCH, JUMP, CORGI SPLOOT)
-           =================================================================== */
         moveLane(dir) {
           const next = Math.max(0, Math.min(2, this.laneIndex + dir));
           if (next !== this.laneIndex) {
@@ -2212,7 +2299,6 @@
 
         slide() {
           if (this.isJumping) {
-            // Fast-fall straight into a sploot!
             this.velocityY = Math.min(this.velocityY, FAST_FALL_VELOCITY);
             this.isSliding = true;
             this.slideTimer = SLIDE_DURATION;
@@ -2225,14 +2311,14 @@
           }
         }
 
-        showToast(text, color = '#ffe57f') {
+        showToast(text, color) {
           this.ui.toast.textContent = text;
-          this.ui.toast.style.color = color;
+          this.ui.toast.style.color = color || '#ffe57f';
           this.ui.toast.classList.add('show');
           if (this.toastTimeout) clearTimeout(this.toastTimeout);
           this.toastTimeout = setTimeout(() => {
             this.ui.toast.classList.remove('show');
-          }, 1100);
+          }, 1150);
         }
 
         addCameraShake(duration, magnitude) {
@@ -2240,15 +2326,11 @@
           this.shakeMagnitude = Math.max(this.shakeMagnitude, magnitude);
         }
 
-        /* ===================================================================
-           SOLVABLE OBSTACLE, GOLDEN BONE, & POWER-UP SPAWNER
-           =================================================================== */
         spawnRow(spawnZ) {
           this.rowsSpawned++;
           const patternRoll = Math.random();
-
-          // Choose 1 or 2 obstacles, ALWAYS guaranteeing at least 1 solvable path!
           const laneOrder = [0, 1, 2].sort(() => Math.random() - 0.5);
+
           let obstacleCount = 1;
           if (this.rowsSpawned > 3 && patternRoll > 0.42) obstacleCount = 2;
           if (this.rowsSpawned > 8 && patternRoll > 0.82) obstacleCount = 3;
@@ -2260,7 +2342,6 @@
             const lane = laneOrder[i];
             let type;
 
-            // Never block all 3 lanes with tall totems
             if (tallCount >= 2 || (obstacleCount === 3 && i === 2 && tallCount >= 1)) {
               type = Math.random() < 0.5 ? 'low' : 'high';
             } else {
@@ -2283,7 +2364,6 @@
               hit: false
             });
 
-            // Place rewarding bone arc over a 'low' hurdle!
             if (type === 'low' && Math.random() < 0.65) {
               for (let k = -2; k <= 2; k++) {
                 const arcZ = spawnZ + k * 2.1;
@@ -2293,7 +2373,6 @@
             }
           }
 
-          // Place line of golden bones in an open lane
           const openLanes = [0, 1, 2].filter((l) => !usedLanes.has(l));
           if (openLanes.length > 0 && Math.random() < 0.78) {
             const boneLane = openLanes[Math.floor(Math.random() * openLanes.length)];
@@ -2303,7 +2382,6 @@
             }
           }
 
-          // Occasional Power-Up (Magnet or Shield) every ~11 rows
           if (this.rowsSpawned % 10 === 6 && openLanes.length > 0) {
             const pLane = openLanes[Math.floor(Math.random() * openLanes.length)];
             const pType = Math.random() < 0.5 ? 'magnet' : 'shield';
@@ -2330,9 +2408,10 @@
           });
         }
 
-        spawnBurst(x, y, z, colorHex, count = 10) {
+        spawnBurst(x, y, z, colorHex, count) {
           let spawned = 0;
-          for (let i = 0; i < this.particles.length && spawned < count; i++) {
+          const total = count || 10;
+          for (let i = 0; i < this.particles.length && spawned < total; i++) {
             const p = this.particles[i];
             if (!p.active) {
               p.active = true;
@@ -2354,14 +2433,10 @@
           }
         }
 
-        /* ===================================================================
-           ANIMATION & PHYSICS UPDATE LOOP
-           =================================================================== */
         updateCorgiAnimation(dt, elapsed) {
           const c = this.corgi;
 
           if (this.state === 'MENU') {
-            // Cute idle breathing, tail wagging, & head bob
             c.root.position.set(0, 0, 0);
             c.bodyPivot.position.y = Math.sin(elapsed * 3.5) * 0.04;
             c.bodyPivot.rotation.set(0, 0, 0);
@@ -2381,7 +2456,6 @@
           }
 
           if (this.state === 'GAMEOVER') {
-            // Cute tumble/dizzy reaction
             this.crashTimer += dt;
             const tilt = Math.min(this.crashTimer * 3.8, 1.0);
             c.bodyPivot.rotation.z = tilt * 0.65;
@@ -2391,58 +2465,50 @@
             return;
           }
 
-          // Smooth lane X interpolation & banking tilt
           const targetX = LANES[this.laneIndex];
           const dx = targetX - this.playerX;
           this.playerX += dx * Math.min(1, dt * 15);
           c.root.position.x = this.playerX;
           c.root.position.y = this.playerY;
 
-          // Bank/lean smoothly into lane switches
           const targetRoll = -dx * 0.14;
           const targetYaw = -dx * 0.12;
           c.root.rotation.z += (targetRoll - c.root.rotation.z) * Math.min(1, dt * 14);
           c.root.rotation.y += (targetYaw - c.root.rotation.y) * Math.min(1, dt * 14);
 
-          // Ground shadow tracks corgi X and shrinks subtly as corgi jumps higher
           c.groundShadow.position.set(this.playerX, 0.03, 0);
           const shadowScale = Math.max(0.45, 1 - this.playerY * 0.14);
           c.groundShadow.scale.setScalar(shadowScale);
 
-          // Invulnerability blink after shield break
           if (this.invulnTimer > 0) {
             c.bodyPivot.visible = Math.floor(elapsed * 22) % 2 === 0;
           } else {
             c.bodyPivot.visible = true;
           }
 
-          // Wag tail joyfully while running
           c.tailPivot.rotation.z = Math.sin(elapsed * 20) * 0.5;
 
           if (this.isSliding && !this.isJumping) {
-            // === CORGI SPLOOT POSE! ===
+            // Flat Corgi Sploot
             c.bodyPivot.position.y += (-0.28 - c.bodyPivot.position.y) * Math.min(1, dt * 18);
             c.bodyPivot.scale.y += (0.64 - c.bodyPivot.scale.y) * Math.min(1, dt * 18);
             c.bodyPivot.scale.z += (1.18 - c.bodyPivot.scale.z) * Math.min(1, dt * 18);
             c.bodyPivot.rotation.x += (0.04 - c.bodyPivot.rotation.x) * Math.min(1, dt * 15);
 
-            // Front paws stretched forward, back paws stretched straight back!
             c.legs.fl.rotation.x = 1.35;
             c.legs.fr.rotation.x = 1.35;
             c.legs.bl.rotation.x = -1.35;
             c.legs.br.rotation.x = -1.35;
 
-            // Head tucked low, ears streamlined back
             c.headGroup.rotation.x = -0.22;
             c.ears[0].rotation.x = 0.65;
             c.ears[1].rotation.x = 0.65;
           } else if (this.isJumping) {
-            // === ENERGETIC LEAP POSE ===
+            // Energetic Leap
             c.bodyPivot.position.y += (0 - c.bodyPivot.position.y) * Math.min(1, dt * 16);
             c.bodyPivot.scale.y += (1 - c.bodyPivot.scale.y) * Math.min(1, dt * 16);
             c.bodyPivot.scale.z += (1 - c.bodyPivot.scale.z) * Math.min(1, dt * 16);
 
-            // Pitch nose up on ascent, nose down on descent
             const pitch = THREE.MathUtils.clamp(this.velocityY * 0.028, -0.35, 0.35);
             c.bodyPivot.rotation.x = pitch;
 
@@ -2451,25 +2517,22 @@
             c.legs.bl.rotation.x = -0.85;
             c.legs.br.rotation.x = -0.75;
 
-            // Ears pinned back in the wind
             c.headGroup.rotation.x = -pitch * 0.4;
             c.ears[0].rotation.x = 0.55;
             c.ears[1].rotation.x = 0.55;
           } else {
-            // === RAPID STUBBY CORGI GALLOP ===
+            // Rapid Gallop
             c.bodyPivot.scale.y += (1 - c.bodyPivot.scale.y) * Math.min(1, dt * 16);
             c.bodyPivot.scale.z += (1 - c.bodyPivot.scale.z) * Math.min(1, dt * 16);
 
             this.corgi.runCycle += dt * (this.speed * 0.82);
             const t = this.corgi.runCycle;
 
-            // Energetic gallop leg cycling
             c.legs.fl.rotation.x = Math.sin(t) * 0.85;
             c.legs.fr.rotation.x = Math.sin(t + 0.55) * 0.85;
             c.legs.bl.rotation.x = Math.sin(t + Math.PI) * 0.85;
             c.legs.br.rotation.x = Math.sin(t + Math.PI + 0.55) * 0.85;
 
-            // Bouncy body & ears
             c.bodyPivot.position.y = Math.abs(Math.sin(t)) * 0.13;
             c.bodyPivot.rotation.x = Math.cos(t) * 0.08;
             c.headGroup.rotation.x = -Math.cos(t) * 0.06;
@@ -2480,7 +2543,6 @@
             c.ears[1].rotation.x = earBounce;
           }
 
-          // Active Power-Up Visual Auras
           c.shieldMesh.visible = this.shieldTimer > 0;
           if (c.shieldMesh.visible) {
             c.shieldMesh.rotation.y += dt * 1.8;
@@ -2495,12 +2557,10 @@
         }
 
         updatePlaying(dt, elapsed) {
-          // Progressive speed scaling
           this.speed = Math.min(MAX_SPEED, this.speed + SPEED_ACCEL * dt);
           const dz = this.speed * dt;
           this.distance += dz;
 
-          // Subtle FOV warp as speed climbs
           const speedRatio = (this.speed - BASE_SPEED) / (MAX_SPEED - BASE_SPEED);
           const targetFov = this.baseFov + speedRatio * 9;
           if (Math.abs(this.camera.fov - targetFov) > 0.05) {
@@ -2508,7 +2568,6 @@
             this.camera.updateProjectionMatrix();
           }
 
-          // Jump physics
           if (this.isJumping) {
             this.playerY += this.velocityY * dt;
             this.velocityY += GRAVITY * dt;
@@ -2522,7 +2581,6 @@
             }
           }
 
-          // Slide timer
           if (this.isSliding && !this.isJumping) {
             this.slideTimer -= dt;
             if (Math.random() < 0.35) {
@@ -2533,12 +2591,10 @@
             }
           }
 
-          // Timers
           if (this.invulnTimer > 0) this.invulnTimer = Math.max(0, this.invulnTimer - dt);
           if (this.magnetTimer > 0) this.magnetTimer = Math.max(0, this.magnetTimer - dt);
           if (this.shieldTimer > 0) this.shieldTimer = Math.max(0, this.shieldTimer - dt);
 
-          // Scroll & recycle temple segments
           let minZ = Infinity;
           for (let i = 0; i < this.segments.length; i++) {
             const seg = this.segments[i];
@@ -2553,22 +2609,18 @@
             }
           }
 
-          // Spawn new obstacle/bone rows ahead of fog horizon
           if (this.distance >= this.nextSpawnDist) {
             this.spawnRow(-126);
-            // Dynamic spacing scales with speed so every pattern stays fair & readable
             const gap = 16.5 + (this.speed - BASE_SPEED) * 0.42 + Math.random() * 4.5;
             this.nextSpawnDist = this.distance + gap;
           }
 
-          // Update & check Obstacles
           const corgiHeight = this.isSliding && !this.isJumping ? 0.68 : 1.45;
           for (let i = this.obstacles.length - 1; i >= 0; i--) {
             const o = this.obstacles[i];
             o.z += dz;
             o.mesh.position.z = o.z;
 
-            // Collision window around player z = 0
             if (!o.hit && this.invulnTimer <= 0 && o.z > -0.95 && o.z < 0.85) {
               const xDist = Math.abs(this.playerX - LANES[o.lane]);
               if (xDist < 0.92) {
@@ -2576,17 +2628,14 @@
                 if (o.type === 'tall') {
                   collided = true;
                 } else if (o.type === 'low') {
-                  // Must jump above ~0.82
                   if (this.playerY < 0.82) collided = true;
                 } else if (o.type === 'high') {
-                  // Must sploot under clearance (~1.12)
                   if (this.playerY + corgiHeight > 1.12) collided = true;
                 }
 
                 if (collided) {
                   o.hit = true;
                   if (this.shieldTimer > 0) {
-                    // Shield absorbs the hit!
                     this.shieldTimer = 0;
                     this.invulnTimer = 1.3;
                     this.sfx.playShieldBreak();
@@ -2607,14 +2656,12 @@
             }
           }
 
-          // Update & collect Golden Bones
           for (let i = this.bones.length - 1; i >= 0; i--) {
             const b = this.bones[i];
             b.mesh.position.z += dz;
             b.mesh.rotation.y += dt * 3.4;
 
             if (!b.collected) {
-              // Magnet attraction across all lanes
               if (this.magnetTimer > 0 && b.mesh.position.z > -16 && b.mesh.position.z < 3) {
                 b.mesh.position.x += (this.playerX - b.mesh.position.x) * Math.min(1, dt * 12);
                 b.mesh.position.y += (this.playerY + 0.85 - b.mesh.position.y) * Math.min(1, dt * 12);
@@ -2623,7 +2670,6 @@
                 b.mesh.position.y = b.baseY + Math.sin(elapsed * 4.5 + b.phase) * 0.14;
               }
 
-              // Check pickup distance
               const dxB = b.mesh.position.x - this.playerX;
               const dyB = b.mesh.position.y - (this.playerY + 0.75);
               const dzB = b.mesh.position.z;
@@ -2644,7 +2690,6 @@
             }
           }
 
-          // Update & collect Power-Ups
           for (let i = this.powerups.length - 1; i >= 0; i--) {
             const p = this.powerups[i];
             p.mesh.position.z += dz;
@@ -2681,10 +2726,9 @@
 
           this.updateHUD();
 
-          // Celebrate beating a friend's shared challenge score!
           if (this.challengeTarget > 0 && !this.challengeBeaten && this.getTotalScore() > this.challengeTarget) {
             this.challengeBeaten = true;
-            this.sfx.playPowerup();
+            this.sfx.playFanfare();
             this.spawnBurst(this.playerX, this.playerY + 1.0, 0, 0x6effb0, 22);
             this.showToast('CHALLENGE BEATEN!', '#6effb0');
             this.ui.hudChallenge.classList.add('beaten');
@@ -2724,7 +2768,6 @@
 
         updateCamera(dt, elapsed) {
           if (this.state === 'MENU') {
-            // Showcase hero angle framing our adorable corgi on the sunlit temple bridge
             const angle = Math.sin(elapsed * 0.55) * 0.38;
             this.camera.position.x = Math.sin(angle) * 4.2;
             this.camera.position.y = 2.65 + Math.sin(elapsed * 0.9) * 0.12;
@@ -2733,7 +2776,6 @@
             return;
           }
 
-          // Smooth chase camera behind corgi
           const targetCamX = this.playerX * 0.55;
           const targetCamY = 4.25 + this.playerY * 0.35;
           const targetCamZ = 7.4;
@@ -2742,7 +2784,6 @@
           this.camera.position.y += (targetCamY - this.camera.position.y) * Math.min(1, dt * 8);
           this.camera.position.z += (targetCamZ - this.camera.position.z) * Math.min(1, dt * 8);
 
-          // Apply screen shake if active
           let shakeX = 0;
           let shakeY = 0;
           if (this.shakeTime > 0) {
@@ -2761,7 +2802,6 @@
           this.ui.hudScore.textContent = this.getTotalScore().toLocaleString();
           this.ui.hudBones.textContent = this.bonesCollected.toLocaleString();
 
-          // Update Power-Up timer bars
           let html = '';
           if (this.magnetTimer > 0) {
             const pct = Math.max(0, (this.magnetTimer / MAGNET_DURATION) * 100);
@@ -2786,7 +2826,7 @@
           requestAnimationFrame(this.animate);
 
           const rawDt = this.clock.getDelta();
-          const dt = Math.min(rawDt, 0.05); // Clamp dt for tab-switch stability
+          const dt = Math.min(rawDt, 0.05);
           const elapsed = this.clock.elapsedTime;
 
           if (this.state === 'PLAYING') {
@@ -2804,13 +2844,36 @@
         }
       }
 
-      // Start the animation loop after window load
-      window.onload = function () {
+      /* =====================================================================
+         7. BOOTSTRAPPER WITH THREE.JS FALLBACK CDN LOADER
+         ===================================================================== */
+      function bootGame() {
         try {
           const game = new TempleCorgiGame();
           game.animate();
         } catch (err) {
-          console.error('Temple Corgi failed to initialize:', err);
+          showFatalError('Failed to start Temple Corgi: ' + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      window.onload = function () {
+        if (typeof window.THREE !== 'undefined') {
+          bootGame();
+        } else {
+          // Automatic fallback to jsDelivr if cdnjs is blocked or slow
+          const fallbackScript = document.createElement('script');
+          fallbackScript.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js';
+          fallbackScript.onload = function () {
+            if (typeof window.THREE !== 'undefined') {
+              bootGame();
+            } else {
+              showFatalError('3D graphics library failed to load. Please check your connection and reload.');
+            }
+          };
+          fallbackScript.onerror = function () {
+            showFatalError('Could not load Three.js from CDN. Please check your internet connection and reload.');
+          };
+          document.head.appendChild(fallbackScript);
         }
       };
     })();
